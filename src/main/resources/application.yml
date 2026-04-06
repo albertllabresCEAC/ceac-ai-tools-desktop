@@ -1,0 +1,29 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: outlookdesktop-com-mcp
+  ai:
+    mcp:
+      server:
+        name: outlook-desktop-com
+        version: 1.0.0
+        instructions: |
+          Servidor MCP para Outlook Desktop en Windows mediante COM.
+          Permite listar correos, leer detalles, crear borradores, adjuntar archivos, guardar adjuntos y enviar mensajes.
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+outlook:
+  temp-dir: ${java.io.tmpdir}/outlookdesktop-com-mcp
+  default-page-size: 25
+
+jacob:
+  dll-path: ${jacob.dll.path:}
+  search-paths:
+    - lib
+    - .
+    - target
