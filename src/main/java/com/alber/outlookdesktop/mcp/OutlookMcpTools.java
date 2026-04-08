@@ -1,23 +1,41 @@
 package com.alber.outlookdesktop.mcp;
 
 import com.alber.outlookdesktop.model.AttachmentContent;
+import com.alber.outlookdesktop.model.AttachmentContentToolRequest;
 import com.alber.outlookdesktop.model.AttachmentInfo;
+import com.alber.outlookdesktop.model.AttachmentListToolRequest;
 import com.alber.outlookdesktop.model.AttachmentPayload;
 import com.alber.outlookdesktop.model.ComposeMode;
 import com.alber.outlookdesktop.model.CreateDraftRequest;
+import com.alber.outlookdesktop.model.ComposeMailToolRequest;
+import com.alber.outlookdesktop.model.DraftAttachmentToolRequest;
+import com.alber.outlookdesktop.model.DraftDispatchToolRequest;
+import com.alber.outlookdesktop.model.DraftDiscardToolRequest;
 import com.alber.outlookdesktop.model.FolderType;
 import com.alber.outlookdesktop.model.MailDraftResponse;
 import com.alber.outlookdesktop.model.MailMessage;
+import com.alber.outlookdesktop.model.McpSearchResult;
+import com.alber.outlookdesktop.model.MessageGetToolRequest;
+import com.alber.outlookdesktop.model.MessageListToolRequest;
 import com.alber.outlookdesktop.model.MessageQuery;
+import com.alber.outlookdesktop.model.MessageSearchToolRequest;
 import com.alber.outlookdesktop.model.SendMailRequest;
 import com.alber.outlookdesktop.model.StatusResponse;
 import com.alber.outlookdesktop.model.UpdateDraftRequest;
+import com.alber.outlookdesktop.model.UpdateDraftToolRequest;
 import com.alber.outlookdesktop.service.OutlookComException;
 import com.alber.outlookdesktop.service.OutlookService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
+import java.time.OffsetDateTime;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class OutlookMcpTools {
@@ -28,111 +46,119 @@ public class OutlookMcpTools {
         this.outlookService = outlookService;
     }
 
-    @Tool(description = "List Outlook Desktop messages from a folder. Valid folders: INBOX, DRAFTS, SENT, OUTBOX, DELETED.")
-    public List<MailMessage> listMessages(String folder, Integer limit, Boolean unreadOnly) {
+    @Tool(description = "List Outlook Desktop messages. Call this tool with a JSON object, not a raw string. Input fields: folder, limit, unreadOnly. Allowed folder values: INBOX, DRAFTS, SENT, OUTBOX, DELETED. If folder is omitted, INBOX is used.")
+    public List<MailMessage> listMessages(MessageListToolRequest request) {
         MessageQuery query = new MessageQuery();
-        if (folder != null) {
-            query.setFolder(parseFolder(folder));
+        if (request != null && request.getFolder() != null) {
+            query.setFolder(parseFolder(request.getFolder()));
         }
-        query.setLimit(limit);
-        query.setUnreadOnly(Boolean.TRUE.equals(unreadOnly));
+        query.setLimit(request != null ? request.getLimit() : null);
+        query.setUnreadOnly(request != null && Boolean.TRUE.equals(request.getUnreadOnly()));
         return outlookService.listMessages(query);
     }
 
-    @Tool(description = "Get a full Outlook Desktop message by its entryId.")
-    public MailMessage getMessage(String entryId) {
-        return outlookService.getMessage(entryId);
+    @Tool(description = "Get a full Outlook Desktop message. Call this tool with a JSON object containing entryId.")
+    public MailMessage getMessage(MessageGetToolRequest request) {
+        return outlookService.getMessage(request.getEntryId());
     }
 
-    @Tool(description = "Create an Outlook Desktop draft email. mode supports NEW, REPLY and REPLY_ALL. originalEntryId is required for reply modes.")
-    public MailDraftResponse createDraft(String mode,
-                                         String originalEntryId,
-                                         String subject,
-                                         String to,
-                                         String cc,
-                                         String bcc,
-                                         String body,
-                                         String htmlBody,
-                                         List<AttachmentPayload> attachments) {
-        CreateDraftRequest request = new CreateDraftRequest();
-        request.setMode(parseComposeMode(mode));
-        request.setOriginalEntryId(originalEntryId);
-        request.setSubject(subject);
-        request.setTo(to);
-        request.setCc(cc);
-        request.setBcc(bcc);
-        request.setBody(body);
-        request.setHtmlBody(htmlBody);
-        request.setAttachments(attachments);
-        return outlookService.createDraft(request);
+    @Tool(description = "Search Outlook Desktop messages by free text. Call this tool with a JSON object containing query, folder, limit and unreadOnly. If folder is omitted or set to ALL, the search runs across INBOX, SENT and DRAFTS. Use fetch with the returned entryId to retrieve the full message.")
+    public List<McpSearchResult> search(MessageSearchToolRequest request) {
+        int effectiveLimit = sanitizeLimit(request != null ? request.getLimit() : null);
+        List<FolderType> folders = resolveSearchFolders(request != null ? request.getFolder() : null);
+        Map<String, McpSearchResult> matches = new LinkedHashMap<>();
+
+        for (FolderType folderType : folders) {
+            MessageQuery messageQuery = new MessageQuery();
+            messageQuery.setFolder(folderType);
+            messageQuery.setUnreadOnly(request != null && Boolean.TRUE.equals(request.getUnreadOnly()));
+            messageQuery.setLimit(Math.max(effectiveLimit * 4, 25));
+
+            for (MailMessage message : outlookService.listMessages(messageQuery)) {
+                if (!matchesQuery(message, request != null ? request.getQuery() : null)) {
+                    continue;
+                }
+                matches.putIfAbsent(message.entryId(), toSearchResult(message, folderType));
+            }
+        }
+
+        return matches.values().stream()
+                .sorted(Comparator.comparing(this::sortTimestamp, Comparator.nullsLast(Comparator.reverseOrder())))
+                .limit(effectiveLimit)
+                .collect(Collectors.toList());
     }
 
-    @Tool(description = "Attach a Base64 file payload to an existing Outlook draft.")
-    public MailDraftResponse addAttachmentToDraft(String entryId, AttachmentPayload attachment) {
-        return outlookService.addAttachmentToDraft(entryId, attachment);
+    @Tool(description = "Fetch a full Outlook Desktop message by entryId. Call this tool with a JSON object containing entryId. Use this after search to read the complete content.")
+    public MailMessage fetch(MessageGetToolRequest request) {
+        return getMessage(request);
     }
 
-    @Tool(description = "Update subject, recipients, body and optionally append attachments to an existing Outlook draft.")
-    public MailDraftResponse updateDraft(String entryId,
-                                         String subject,
-                                         String to,
-                                         String cc,
-                                         String bcc,
-                                         String body,
-                                         String htmlBody,
-                                         List<AttachmentPayload> attachments) {
-        UpdateDraftRequest request = new UpdateDraftRequest();
-        request.setSubject(subject);
-        request.setTo(to);
-        request.setCc(cc);
-        request.setBcc(bcc);
-        request.setBody(body);
-        request.setHtmlBody(htmlBody);
-        request.setAttachments(attachments);
-        return outlookService.updateDraft(entryId, request);
+    @Tool(description = "Create an Outlook Desktop draft email. Call this tool with a JSON object. Allowed mode values: NEW, REPLY, REPLY_ALL. originalEntryId is required when mode is REPLY or REPLY_ALL. Attachments must be sent as an array of objects with fileName, base64Content and optional mediaType.")
+    public MailDraftResponse createDraft(ComposeMailToolRequest request) {
+        CreateDraftRequest draftRequest = new CreateDraftRequest();
+        draftRequest.setMode(parseComposeMode(request.getMode()));
+        draftRequest.setOriginalEntryId(request.getOriginalEntryId());
+        draftRequest.setSubject(request.getSubject());
+        draftRequest.setTo(request.getTo());
+        draftRequest.setCc(request.getCc());
+        draftRequest.setBcc(request.getBcc());
+        draftRequest.setBody(request.getBody());
+        draftRequest.setHtmlBody(request.getHtmlBody());
+        draftRequest.setAttachments(request.getAttachments());
+        return outlookService.createDraft(draftRequest);
     }
 
-    @Tool(description = "List attachments available in an Outlook email by entryId.")
-    public List<AttachmentInfo> listAttachments(String entryId) {
-        return outlookService.listAttachments(entryId);
+    @Tool(description = "Attach a Base64 file payload to an existing Outlook draft. Call this tool with a JSON object containing entryId and attachment. The attachment object must include fileName and base64Content, and may include mediaType.")
+    public MailDraftResponse addAttachmentToDraft(DraftAttachmentToolRequest request) {
+        return outlookService.addAttachmentToDraft(request.getEntryId(), request.getAttachment());
     }
 
-    @Tool(description = "Get an Outlook email attachment content encoded as Base64.")
-    public AttachmentContent getAttachment(String entryId, Integer attachmentIndex) {
-        return outlookService.downloadAttachment(entryId, attachmentIndex);
+    @Tool(description = "Update an existing Outlook draft. Call this tool with a JSON object containing entryId plus any fields to change. Attachments are appended; existing attachments are kept.")
+    public MailDraftResponse updateDraft(UpdateDraftToolRequest request) {
+        UpdateDraftRequest draftRequest = new UpdateDraftRequest();
+        draftRequest.setSubject(request.getSubject());
+        draftRequest.setTo(request.getTo());
+        draftRequest.setCc(request.getCc());
+        draftRequest.setBcc(request.getBcc());
+        draftRequest.setBody(request.getBody());
+        draftRequest.setHtmlBody(request.getHtmlBody());
+        draftRequest.setAttachments(request.getAttachments());
+        return outlookService.updateDraft(request.getEntryId(), draftRequest);
     }
 
-    @Tool(description = "Send an Outlook email. mode supports NEW, REPLY and REPLY_ALL. originalEntryId is required for reply modes.")
-    public StatusResponse sendMail(String mode,
-                                   String originalEntryId,
-                                   String subject,
-                                   String to,
-                                   String cc,
-                                   String bcc,
-                                   String body,
-                                   String htmlBody,
-                                   List<AttachmentPayload> attachments) {
-        SendMailRequest request = new SendMailRequest();
-        request.setMode(parseComposeMode(mode));
-        request.setOriginalEntryId(originalEntryId);
-        request.setSubject(subject);
-        request.setTo(to);
-        request.setCc(cc);
-        request.setBcc(bcc);
-        request.setBody(body);
-        request.setHtmlBody(htmlBody);
-        request.setAttachments(attachments);
-        return outlookService.sendMail(request);
+    @Tool(description = "List attachments available in an Outlook email. Call this tool with a JSON object containing entryId.")
+    public List<AttachmentInfo> listAttachments(AttachmentListToolRequest request) {
+        return outlookService.listAttachments(request.getEntryId());
     }
 
-    @Tool(description = "Send an existing Outlook draft by its entryId.")
-    public StatusResponse sendDraft(String entryId) {
-        return outlookService.sendExistingDraft(entryId);
+    @Tool(description = "Get an Outlook email attachment encoded as Base64. Call this tool with a JSON object containing entryId and attachmentIndex. attachmentIndex is zero-based.")
+    public AttachmentContent getAttachment(AttachmentContentToolRequest request) {
+        return outlookService.downloadAttachment(request.getEntryId(), request.getAttachmentIndex());
     }
 
-    @Tool(description = "Discard an existing Outlook draft. By default it moves to Deleted Items. Set permanent=true to delete permanently.")
-    public StatusResponse discardDraft(String entryId, Boolean permanent) {
-        return outlookService.discardDraft(entryId, Boolean.TRUE.equals(permanent));
+    @Tool(description = "Send an Outlook email immediately. Call this tool with a JSON object. Allowed mode values: NEW, REPLY, REPLY_ALL. originalEntryId is required when mode is REPLY or REPLY_ALL. Attachments must be sent as an array of objects with fileName, base64Content and optional mediaType.")
+    public StatusResponse sendMail(ComposeMailToolRequest request) {
+        SendMailRequest sendRequest = new SendMailRequest();
+        sendRequest.setMode(parseComposeMode(request.getMode()));
+        sendRequest.setOriginalEntryId(request.getOriginalEntryId());
+        sendRequest.setSubject(request.getSubject());
+        sendRequest.setTo(request.getTo());
+        sendRequest.setCc(request.getCc());
+        sendRequest.setBcc(request.getBcc());
+        sendRequest.setBody(request.getBody());
+        sendRequest.setHtmlBody(request.getHtmlBody());
+        sendRequest.setAttachments(request.getAttachments());
+        return outlookService.sendMail(sendRequest);
+    }
+
+    @Tool(description = "Send an existing Outlook draft. Call this tool with a JSON object containing entryId.")
+    public StatusResponse sendDraft(DraftDispatchToolRequest request) {
+        return outlookService.sendExistingDraft(request.getEntryId());
+    }
+
+    @Tool(description = "Discard an existing Outlook draft. Call this tool with a JSON object containing entryId and optional permanent. If permanent is true, the draft is deleted permanently. Otherwise it is moved to Deleted Items.")
+    public StatusResponse discardDraft(DraftDiscardToolRequest request) {
+        return outlookService.discardDraft(request.getEntryId(), Boolean.TRUE.equals(request.getPermanent()));
     }
 
     private FolderType parseFolder(String folder) {
@@ -141,6 +167,13 @@ public class OutlookMcpTools {
         } catch (IllegalArgumentException ex) {
             throw new OutlookComException("Folder invalida. Usa: INBOX, DRAFTS, SENT, OUTBOX, DELETED", ex);
         }
+    }
+
+    private List<FolderType> resolveSearchFolders(String folder) {
+        if (!StringUtils.hasText(folder) || "ALL".equalsIgnoreCase(folder.trim())) {
+            return List.of(FolderType.INBOX, FolderType.SENT, FolderType.DRAFTS);
+        }
+        return List.of(parseFolder(folder));
     }
 
     private ComposeMode parseComposeMode(String mode) {
@@ -152,5 +185,60 @@ public class OutlookMcpTools {
         } catch (IllegalArgumentException ex) {
             throw new OutlookComException("Compose mode invalido. Usa: NEW, REPLY, REPLY_ALL", ex);
         }
+    }
+
+    private int sanitizeLimit(Integer limit) {
+        if (limit == null) {
+            return 10;
+        }
+        return Math.max(1, Math.min(limit, 25));
+    }
+
+    private boolean matchesQuery(MailMessage message, String query) {
+        if (!StringUtils.hasText(query)) {
+            return true;
+        }
+        String normalizedQuery = query.toLowerCase(Locale.ROOT);
+        return contains(message.subject(), normalizedQuery)
+                || contains(message.senderName(), normalizedQuery)
+                || contains(message.senderEmail(), normalizedQuery)
+                || contains(message.to(), normalizedQuery)
+                || contains(message.cc(), normalizedQuery)
+                || contains(message.bcc(), normalizedQuery)
+                || contains(message.body(), normalizedQuery);
+    }
+
+    private boolean contains(String value, String query) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private McpSearchResult toSearchResult(MailMessage message, FolderType folderType) {
+        return new McpSearchResult(
+                message.entryId(),
+                folderType.name(),
+                message.subject(),
+                message.senderName(),
+                message.senderEmail(),
+                buildSnippet(message),
+                message.unread(),
+                message.receivedAt(),
+                message.sentAt()
+        );
+    }
+
+    private String buildSnippet(MailMessage message) {
+        String source = StringUtils.hasText(message.body()) ? message.body() : message.htmlBody();
+        if (!StringUtils.hasText(source)) {
+            return null;
+        }
+        String normalized = source.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= 240) {
+            return normalized;
+        }
+        return normalized.substring(0, 237) + "...";
+    }
+
+    private OffsetDateTime sortTimestamp(McpSearchResult result) {
+        return result.receivedAt() != null ? result.receivedAt() : result.sentAt();
     }
 }

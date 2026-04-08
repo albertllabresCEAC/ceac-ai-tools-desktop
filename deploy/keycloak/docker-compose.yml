@@ -1,0 +1,14 @@
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1
+    container_name: outlookdesktop-mcp-keycloak
+    command: start-dev --import-realm --proxy-headers xforwarded
+    ports:
+      - "8081:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME: ${KC_HOSTNAME:-http://localhost:8081}
+    volumes:
+      - ./realm-outlookdesktop-mcp.json:/opt/keycloak/data/import/realm-outlookdesktop-mcp.json:ro

@@ -1,21 +1,40 @@
 server:
   port: 8080
+  forward-headers-strategy: framework
 
 spring:
   application:
     name: outlookdesktop-com-mcp
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
   ai:
     mcp:
       server:
+        protocol: STREAMABLE
         name: outlook-desktop-com
         version: 1.0.0
         instructions: |
           Servidor MCP para Outlook Desktop en Windows mediante COM.
           Permite listar correos, leer detalles, crear borradores, adjuntar archivos, guardar adjuntos y enviar mensajes.
+        streamable-http:
+          mcp-endpoint: ${mcp.remote.mcp-endpoint}
 
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html
+mcp:
+  remote:
+    public-base-url: ${MCP_PUBLIC_BASE_URL:http://localhost:${server.port}}
+    mcp-endpoint: /mcp
+    allowed-origin-patterns:
+      - ${MCP_ALLOWED_ORIGIN_PATTERNS:http://localhost:*,http://127.0.0.1:*,https://localhost:*,https://127.0.0.1:*}
+    auth:
+      enabled: ${MCP_AUTH_ENABLED:false}
+      issuer-uri: ${MCP_OAUTH_ISSUER_URI:}
+      jwk-set-uri: ${MCP_OAUTH_JWK_SET_URI:}
+      required-audience: ${MCP_OAUTH_REQUIRED_AUDIENCE:}
+      required-scope: ${MCP_OAUTH_REQUIRED_SCOPE:mcp:tools}
+      resource-name: ${MCP_RESOURCE_NAME:Outlook Desktop COM MCP}
+      scopes-supported:
+        - ${MCP_OAUTH_REQUIRED_SCOPE:mcp:tools}
 
 outlook:
   temp-dir: ${java.io.tmpdir}/outlookdesktop-com-mcp

@@ -1,0 +1,38 @@
+{
+  "realm": "outlookdesktop-mcp",
+  "enabled": true,
+  "displayName": "Outlook Desktop MCP",
+  "clients": [
+    {
+      "clientId": "mcp-inspector",
+      "name": "MCP Inspector",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "redirectUris": [
+        "http://127.0.0.1:6274/oauth/callback",
+        "http://localhost:6274/oauth/callback",
+        "http://127.0.0.1:*/*",
+        "http://localhost:*/*"
+      ],
+      "webOrigins": [
+        "http://127.0.0.1:6274",
+        "http://localhost:6274",
+        "+"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email",
+        "mcp:tools"
+      ]
+    }
+  ],
+  "clientScopes": [
+    {
+      "name": "mcp:tools",
+      "description": "Scope used to access the Outlook Desktop MCP server",
+      "protocol": "openid-connect"
+    }
+  ]
+}
