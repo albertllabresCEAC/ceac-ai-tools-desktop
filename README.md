@@ -1,6 +1,6 @@
-# CEAC IA Tools
+# CEAC AI Tools Desktop
 
-Launcher desktop Windows para CEAC IA Tools. El launcher autentica contra el control plane central y expone runtimes MCP locales por recurso.
+Cliente desktop Windows de CEAC AI Tools. El launcher autentica contra el control plane central y expone runtimes MCP locales por recurso.
 
 Estado actual del producto:
 
@@ -22,6 +22,8 @@ El producto tiene tres piezas:
    hoy:
    - Outlook por COM
    - qBid por HTTP scraping
+
+Los dos runtimes viven ya dentro del mismo proyecto desktop. qBid ha dejado de depender de un repo Maven externo.
 
 ## Que hace el launcher
 
@@ -88,7 +90,7 @@ Acciones:
 
 ### QBid MCP
 
-Es la operativa del runtime qBid.
+Es la operativa del runtime qBid integrado.
 
 Ademas de la informacion de bootstrap, pide credenciales locales de qBid:
 
@@ -105,7 +107,7 @@ Acciones:
 - `Abrir Swagger`
 - `Copiar Swagger`
 
-Esas credenciales qBid no viajan al backend ni a Keycloak. Se usan solo en local para arrancar el runtime qBid.
+Esas credenciales qBid no viajan al backend ni a Keycloak. Se usan solo en local para arrancar el runtime qBid embebido.
 
 ## Requisitos
 
@@ -114,7 +116,7 @@ Esas credenciales qBid no viajan al backend ni a Keycloak. Se usan solo en local
 - Maven 3.9+
 - `cloudflared` instalado o accesible por `PATH`
 - Outlook Desktop instalado para `Outlook MCP`
-- proyecto `qBidScrAPI` disponible en disco para `QBid MCP`
+- acceso de red a qBid / sBid para `QBid MCP`
 
 ## Scripts
 
@@ -158,7 +160,6 @@ Es un alias legado de `run-full-local.bat`.
 - `CONTROL_PLANE_MACHINE_ID`
 - `CONTROL_PLANE_CLIENT_VERSION`
 - `CLOUDFLARED_CMD`
-- `CEAC_QBID_PROJECT_ROOT`
 
 ### Desarrollo
 
@@ -217,8 +218,6 @@ Valores tipicos:
 - `logs/launcher-*.log`
 - `logs/cloudflared-*.stdout.log`
 - `logs/cloudflared-*.stderr.log`
-- `logs/qbid-runtime-*.stdout.log`
-- `logs/qbid-runtime-*.stderr.log`
 - `.env.generated`
 
 ## Documentacion interna
@@ -229,4 +228,4 @@ Valores tipicos:
 
 ## Estado tecnico
 
-El launcher ya esta adaptado a multi-recurso, pero el nombre historico del paquete Java sigue siendo `outlookdesktop` para evitar una migracion de paquetes con bajo retorno. El branding visible del producto ya es `CEAC IA Tools`.
+El launcher ya esta adaptado a multi-recurso y qBid queda integrado bajo el mismo artefacto Maven del desktop. El nombre historico del paquete Java sigue siendo `outlookdesktop` en parte del codigo para evitar una migracion de paquetes con bajo retorno, pero el producto visible y la estructura funcional ya son `CEAC IA Tools`.

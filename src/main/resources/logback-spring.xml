@@ -3,7 +3,7 @@
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
-    <appender name="SWING" class="com.alber.outlookdesktop.ui.SwingLogAppender">
+    <appender name="SWING" class="tools.ceac.ai.desktop.ui.SwingLogAppender">
         <pattern>%d{HH:mm:ss} %-5level %logger{36} - %msg%n</pattern>
     </appender>
 

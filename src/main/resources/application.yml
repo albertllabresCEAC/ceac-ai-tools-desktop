@@ -4,7 +4,7 @@ server:
 
 spring:
   application:
-    name: ceac-ia-tools-launcher
+    name: ceac-ai-tools-desktop
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher

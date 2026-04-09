@@ -45,7 +45,6 @@ Se mantiene para no romper costumbre, pero el nombre correcto es `run-full-local
 - `DEV_CONTROL_PLANE_ROOT`
 - `DEV_CONTROL_PLANE_PORT`
 - `DEV_CONTROL_PLANE_KEYCLOAK_PORT`
-- `CEAC_QBID_PROJECT_ROOT`
 
 ## Cuándo usar cada modo
 

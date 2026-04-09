@@ -38,14 +38,14 @@ Responsabilidades:
 
 ### `QbidRuntimeService`
 
-Gestiona el runtime qBid como proceso local independiente.
+Gestiona el runtime qBid como contexto Spring interno del mismo desktop.
 
 Responsabilidades:
 
 - validar credenciales qBid
-- arrancar `qBidScrAPI`
+- arrancar el runtime qBid embebido
 - inyectarle las variables OAuth/publicas derivadas del bootstrap
-- parar el proceso y reportar Swagger
+- parar el contexto y reportar Swagger
 
 ### `ControlPlaneSession`
 
@@ -92,7 +92,6 @@ Depende de:
 - bootstrap `qbid`
 - `cloudflared`
 - credenciales qBid locales
-- repo `qBidScrAPI`
 
 ## Flujo Login -> Outlook MCP
 
@@ -114,7 +113,7 @@ Depende de:
 6. al arrancar:
    - valida prerequisitos
    - levanta `cloudflared`
-   - arranca `qBidScrAPI` como proceso local
+   - arranca el runtime qBid embebido sobre su propio contexto Spring
 
 ## Por que los dos MCP van separados
 
@@ -137,8 +136,8 @@ El launcher ya no asume "un solo MCP", sino "varios recursos MCP gestionados por
 
 ## Archivos y puntos de extension
 
-- [CeacLauncherWindow.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/ui/CeacLauncherWindow.java)
-- [RemoteLauncherService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/RemoteLauncherService.java)
-- [QbidRuntimeService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/QbidRuntimeService.java)
-- [ManagedMcpKind.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/ManagedMcpKind.java)
-- [ControlPlaneSession.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/ControlPlaneSession.java)
+- [CeacLauncherWindow.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/ui/CeacLauncherWindow.java)
+- [RemoteLauncherService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/RemoteLauncherService.java)
+- [QbidRuntimeService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java)
+- [ManagedMcpKind.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java)
+- [ControlPlaneSession.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/ControlPlaneSession.java)
