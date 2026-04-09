@@ -1,104 +1,68 @@
-# Development workflow
-
-## Objetivo
-
-Este documento deja clara una distincion importante del repo:
-
-- que scripts forman parte del uso normal del cliente
-- que scripts existen solo para comodidad de desarrollo local
+# Development Workflow
 
 ## Regla simple
 
-Si quieres usar el cliente desktop contra el entorno central, usa:
+- uso normal del producto: `run.bat`
+- entorno local completo de desarrollo: `run-full-local.bat`
 
-- [run.bat](C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/run.bat)
+## `run.bat`
 
-Si quieres levantar tambien el control plane local y sus dependencias para desarrollar de punta a punta, usa:
+Es el punto de entrada del producto.
 
-- [run-full-local.bat](C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/run-full-local.bat)
+Hace:
 
-## Scripts del repo
-
-### `run.bat`
-
-Pertenece al producto.
-
-Responsabilidad:
-
-- arrancar el cliente desktop con defaults razonables del control plane central
-- fijar `DARTMAKER_DEV_MODE=false`
+- `DARTMAKER_DEV_MODE=false`
+- control plane central por defecto
+- arranque del launcher Swing
 
 No hace:
 
-- levantar PostgreSQL
-- levantar Keycloak del control plane
-- arrancar el control plane local
+- levantar el backend local
+- levantar Docker del control plane
+- preparar credenciales de desarrollo
 
-### `run-full-local.bat`
+## `run-full-local.bat`
 
 Es tooling de desarrollo.
 
-Responsabilidad:
+Hace:
 
-- levantar dependencias del control plane local
-- arrancar el control plane local
-- exportar variables de entorno del launcher
-- fijar `DARTMAKER_DEV_MODE=true`
-- delegar despues en `run.bat`
+- `DARTMAKER_DEV_MODE=true`
+- `docker compose up -d` en el control plane
+- arranque del backend local
+- apertura del launcher
 
-Es util para:
+Tambien deja editable la URL del control plane para pruebas.
 
-- probar login
-- probar bootstrap
-- probar el launcher end-to-end
-- depurar el contrato entre backend y cliente
-
-No debe confundirse con el flujo normal del producto.
-
-### `run-dev.bat`
+## `run-dev.bat`
 
 Es un alias legado.
 
-Se mantiene para no romper habitos ni referencias antiguas, pero el nombre recomendado es:
+Se mantiene para no romper costumbre, pero el nombre correcto es `run-full-local.bat`.
 
-- `run-full-local.bat`
+## Variables utiles
 
-### `scripts/Start-Launcher.ps1`
+- `DEV_CONTROL_PLANE_ROOT`
+- `DEV_CONTROL_PLANE_PORT`
+- `DEV_CONTROL_PLANE_KEYCLOAK_PORT`
+- `CEAC_QBID_PROJECT_ROOT`
 
-Es el motor que usa `run.bat` para arrancar la app cliente.
+## Cuándo usar cada modo
 
-### `scripts/dev/Run-Full-Local.ps1`
+### Producto
 
-Es el motor real del flujo full-local de desarrollo.
+Usa `run.bat` cuando quieras:
 
-### `scripts/Run-Dev.ps1`
+- entrar al panel de control real
+- arrancar Outlook MCP
+- arrancar QBid MCP
+- probar el producto como usuario
 
-Es un wrapper legado que delega en `scripts/dev/Run-Full-Local.ps1`.
+### Desarrollo
 
-## Por que esta separacion tiene sentido
+Usa `run-full-local.bat` cuando quieras:
 
-Porque el cliente desktop y el entorno de desarrollo no son la misma cosa.
-
-El cliente desktop real:
-
-- solo necesita el control plane ya existente
-- no deberia asumir que va a levantar infraestructura
-
-El entorno de desarrollo:
-
-- si necesita orquestar varios servicios
-- mezcla este repo y el repo del control plane
-
-Mantener nombres distintos ayuda a que esa frontera quede clara.
-
-## Como se activa el modo desarrollo
-
-El modo desarrollo no se autodetecta. Solo se activa si:
-
-- ejecutas `run-full-local.bat`
-- ejecutas `run-dev.bat`
-- o defines manualmente `DARTMAKER_DEV_MODE=true`
-
-En ese modo la UI desbloquea la URL del control plane y muestra un titulo con sufijo `[DEV]`.
-
-Incluso en desarrollo, los unicos campos pensados para editar a mano en la pantalla de login son las credenciales. `machineId` y `clientVersion` se tratan como contexto del launcher y se muestran como solo lectura.
+- depurar contrato backend/launcher
+- levantar el stack local entero
+- tocar el control plane y el launcher a la vez
+- probar cambios antes de subirlos

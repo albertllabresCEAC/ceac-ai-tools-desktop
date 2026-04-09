@@ -88,7 +88,7 @@ public class McpRemoteProperties {
         private String jwkSetUri;
         private String requiredAudience;
         private String requiredScope = "mcp:tools";
-        private String resourceName = "Outlook Desktop COM MCP";
+        private String resourceName = "Outlook MCP";
         private List<String> scopesSupported = new ArrayList<>(List.of("mcp:tools"));
 
         public boolean isEnabled() {

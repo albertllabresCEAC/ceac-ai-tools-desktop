@@ -4,7 +4,7 @@ server:
 
 spring:
   application:
-    name: outlookdesktop-com-mcp
+    name: ceac-ia-tools-launcher
   mvc:
     pathmatch:
       matching-strategy: ant_path_matcher
@@ -12,10 +12,10 @@ spring:
     mcp:
       server:
         protocol: STREAMABLE
-        name: outlook-desktop-com
+        name: ceac-outlook-mcp
         version: 1.0.0
         instructions: |
-          Servidor MCP para Outlook Desktop en Windows mediante COM.
+          Runtime MCP de CEAC IA Tools para Outlook Desktop en Windows mediante COM.
           Permite listar correos, leer detalles, crear borradores, adjuntar archivos, guardar adjuntos y enviar mensajes.
         streamable-http:
           mcp-endpoint: ${mcp.remote.mcp-endpoint}
@@ -32,12 +32,12 @@ mcp:
       jwk-set-uri: ${MCP_OAUTH_JWK_SET_URI:}
       required-audience: ${MCP_OAUTH_REQUIRED_AUDIENCE:}
       required-scope: ${MCP_OAUTH_REQUIRED_SCOPE:mcp:tools}
-      resource-name: ${MCP_RESOURCE_NAME:Outlook Desktop COM MCP}
+      resource-name: ${MCP_RESOURCE_NAME:Outlook MCP}
       scopes-supported:
         - ${MCP_OAUTH_REQUIRED_SCOPE:mcp:tools}
 
 outlook:
-  temp-dir: ${java.io.tmpdir}/outlookdesktop-com-mcp
+  temp-dir: ${java.io.tmpdir}/ceac-ia-tools-outlook-mcp
   default-page-size: 25
 
 jacob:

@@ -1,6 +1,9 @@
 package com.alber.outlookdesktop.launcher;
 
 public record BootstrapResponse(
+        String resourceKey,
+        String displayName,
+        int localPort,
         String tunnelId,
         String tunnelToken,
         String mcpHostname,

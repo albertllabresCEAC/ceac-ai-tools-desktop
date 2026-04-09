@@ -1,180 +1,144 @@
-# Launcher architecture
+# Launcher Architecture
 
 ## Objetivo
 
-El launcher existe para reducir el runtime del cliente desktop a dos pasos visibles:
+El launcher desktop es la capa de orquestacion local de CEAC IA Tools. Su funcion es:
 
-1. `Login`
-2. `Outlook MCP`
+- autenticar al usuario contra el control plane
+- cargar bootstrap por recurso
+- arrancar tunnels locales
+- arrancar runtimes MCP locales
 
-Todo lo demas debe quedar encapsulado.
-
-## Regla de diseño
-
-La aplicacion desktop no es el plano de control. Solo consume el plano de control.
-
-Eso implica:
-
-- no crea tunnels
-- no gestiona DNS
-- no arranca ni administra Keycloak
-- no decide issuer, audience ni scope
-
-Todo eso viene del backend mediante `bootstrap`.
+No es el plano de control.
 
 ## Componentes principales
 
-### `LauncherWindow`
+### `CeacLauncherWindow`
 
-Clase Swing que:
+Construye y gobierna la UI Swing.
 
-- construye la UI
-- mantiene el estado de sesion local
-- coordina las acciones de los botones
-- refleja en pantalla el bootstrap recibido y el estado del runtime
+Responsabilidades:
+
+- mantener el estado de sesion
+- reflejar el bootstrap en pantalla
+- coordinar acciones de cada pestana
+- mostrar actividad y errores operativos
 
 ### `RemoteLauncherService`
 
-Servicio de infraestructura del launcher. Hace el trabajo no visual:
+Es el adaptador del launcher al control plane y a `cloudflared`.
 
-- login HTTP contra el control plane
-- fetch de bootstrap
-- validacion minima del bootstrap
-- arranque y parada de `cloudflared`
-- escritura de `.env.generated`
-- validacion de prerequisitos del runtime
+Responsabilidades:
+
+- `POST /api/client/login`
+- `POST /api/client/bootstrap`
+- validacion basica del bootstrap
+- arranque y parada de `cloudflared` por recurso
+- generacion de `.env.generated`
+
+### `QbidRuntimeService`
+
+Gestiona el runtime qBid como proceso local independiente.
+
+Responsabilidades:
+
+- validar credenciales qBid
+- arrancar `qBidScrAPI`
+- inyectarle las variables OAuth/publicas derivadas del bootstrap
+- parar el proceso y reportar Swagger
 
 ### `ControlPlaneSession`
 
-Record que representa la sesion del desktop:
+Representa la sesion autenticada del desktop.
+
+Contiene:
 
 - URL del control plane
-- token del desktop
-- identidad del usuario
-- bootstrap recibido
+- token desktop
+- identidad resuelta
+- bootstrap por recurso
+- lista de recursos disponibles
 
-### `RuntimeSettings`
+## Modelo de UI
 
-Adaptador entre el `BootstrapResponse` y las properties Spring con las que se levanta la app local.
+### Pestana `Login`
 
-## Flujo Login -> MCP
+Es global. No depende de un recurso MCP concreto.
 
-### 1. Login
+Su salida es:
 
-La pestana `Login` recoge:
+- sesion del desktop
+- bootstrap para `outlook`
+- bootstrap para `qbid`
 
-- `username`
-- `password`
-- `machineId`
-- `clientVersion`
+### Pestana `Outlook MCP`
 
-En el flujo normal solo `username` y `password` son editables. `controlPlaneUrl`, `machineId` y `clientVersion` se muestran como contexto calculado o fijo del launcher.
+Gestiona el runtime Outlook.
 
-Con eso llama a `POST /api/client/login`.
+Depende de:
 
-Si todo va bien:
+- sesion activa
+- bootstrap `outlook`
+- `cloudflared`
+- Outlook local
 
-- guarda `ControlPlaneSession`
-- pinta el `BootstrapResponse`
-- habilita la pestana `Outlook MCP`
+### Pestana `QBid MCP`
 
-En esta pestana solo viven las acciones de sesion:
+Gestiona el runtime qBid.
 
-- iniciar sesion en panel de control
-- cerrar sesion
+Depende de:
 
-No contiene acciones operativas del runtime MCP.
+- sesion activa
+- bootstrap `qbid`
+- `cloudflared`
+- credenciales qBid locales
+- repo `qBidScrAPI`
 
-### Modo normal frente a modo desarrollo
+## Flujo Login -> Outlook MCP
 
-En modo normal:
+1. el usuario se autentica
+2. el launcher guarda `ControlPlaneSession`
+3. la pestana `Outlook MCP` muestra bootstrap
+4. al arrancar:
+   - valida prerequisitos
+   - levanta `cloudflared`
+   - arranca Spring Boot local de Outlook
 
-- el control plane se considera fijo
-- la URL no se muestra como campo editable
-- `machineId` y `clientVersion` se muestran como campos solo lectura
+## Flujo Login -> QBid MCP
 
-En modo desarrollo:
+1. el usuario se autentica
+2. el launcher guarda `ControlPlaneSession`
+3. la pestana `QBid MCP` muestra bootstrap
+4. el usuario introduce credenciales qBid
+5. el launcher valida esas credenciales contra qBid
+6. al arrancar:
+   - valida prerequisitos
+   - levanta `cloudflared`
+   - arranca `qBidScrAPI` como proceso local
 
-- la URL del control plane vuelve a ser editable
-- se usa para pruebas locales o entornos alternativos
-- el titulo de la ventana incluye `[DEV]`
+## Por que los dos MCP van separados
 
-### 2. Arranque del Outlook MCP
+Porque son runtimes distintos:
 
-La pestana `Outlook MCP` solo puede arrancar si hay sesion valida.
+- distinto puerto local
+- distinto hostname publico
+- distinto tunnel token
+- distinto audience/scope OAuth
+- distinta logica local
 
-Pasos:
+El launcher ya no asume "un solo MCP", sino "varios recursos MCP gestionados por la misma sesion".
 
-1. comprobar que existe `bootstrap`
-2. comprobar que `authExposureMode = CENTRAL_AUTH`
-3. arrancar o reutilizar `cloudflared`
-4. validar prerequisitos
-5. traducir bootstrap a `RuntimeSettings`
-6. escribir `.env.generated`
-7. arrancar Spring Boot con esas properties
+## Reglas de seguridad
 
-Las acciones visibles de esta pestana son:
+- el launcher solo soporta `CENTRAL_AUTH`
+- las credenciales de Cloudflare nunca llegan al cliente
+- las credenciales qBid no se envian al backend
+- el issuer OAuth debe ser publico, no `localhost`
 
-- validar estado
-- arrancar MCP
-- parar MCP
-- copiar MCP URL
-- abrir Swagger
-- copiar Swagger
+## Archivos y puntos de extension
 
-## Por que `CENTRAL_AUTH` es obligatorio aqui
-
-El launcher del desktop actual se ha simplificado para el escenario real de clientes MCP externos.
-
-Si el backend devolviera `LOCAL_AUTH`, el issuer OAuth dependeria de un servicio de autenticacion por usuario. Eso no forma parte del runtime soportado por el cliente actual y haria la experiencia mucho mas fragil.
-
-## `.env.generated`
-
-El launcher no modifica `application.yml`. En su lugar genera `.env.generated` con:
-
-- `MCP_PUBLIC_BASE_URL`
-- `MCP_AUTH_ENABLED`
-- `MCP_OAUTH_ISSUER_URI`
-- `MCP_OAUTH_JWK_SET_URI`
-- `MCP_OAUTH_REQUIRED_AUDIENCE`
-- `MCP_OAUTH_REQUIRED_SCOPE`
-- `MCP_RESOURCE_NAME`
-
-Estas variables son la forma en que el bootstrap del backend se convierte en configuracion efectiva del runtime local.
-
-## Interaccion con la app Spring local
-
-La app local solo se arranca desde la pestana `Outlook MCP`.
-
-En entorno grafico:
-
-- `main()` abre el launcher
-- no se arranca la API ni el MCP automaticamente
-
-En entorno headless:
-
-- `main()` si arranca Spring Boot directamente
-
-## Logs
-
-### Launcher
-
-- `logs/launcher-*.log`
-
-### cloudflared
-
-- `logs/cloudflared-*.stdout.log`
-- `logs/cloudflared-*.stderr.log`
-
-### Variables generadas
-
-- `.env.generated`
-
-## Extension points
-
-Si en el futuro cambia el contrato con el backend, los puntos mas sensibles son:
-
-- [RemoteLauncherService.java](C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/RemoteLauncherService.java)
-- [LauncherWindow.java](C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/ui/LauncherWindow.java)
-- [McpRemoteProperties.java](C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/config/McpRemoteProperties.java)
-- [SecurityConfig.java](C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/config/SecurityConfig.java)
+- [CeacLauncherWindow.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/ui/CeacLauncherWindow.java)
+- [RemoteLauncherService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/RemoteLauncherService.java)
+- [QbidRuntimeService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/QbidRuntimeService.java)
+- [ManagedMcpKind.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/ManagedMcpKind.java)
+- [ControlPlaneSession.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/com/alber/outlookdesktop/launcher/ControlPlaneSession.java)

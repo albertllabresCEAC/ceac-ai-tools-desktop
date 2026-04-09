@@ -1,6 +1,7 @@
 package com.alber.outlookdesktop.launcher;
 
 import java.time.Instant;
+import java.util.List;
 
 public record ClientLoginResponse(
         String tokenType,
@@ -9,6 +10,7 @@ public record ClientLoginResponse(
         String externalUserId,
         String username,
         String email,
-        BootstrapResponse bootstrap
+        BootstrapResponse bootstrap,
+        List<ClientMcpResourceResponse> resources
 ) {
 }

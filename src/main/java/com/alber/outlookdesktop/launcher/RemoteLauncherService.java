@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -45,7 +46,6 @@ import java.util.regex.Pattern;
  */
 public class RemoteLauncherService {
 
-    private static final String CLOUDFLARED_METRICS_URL = "http://127.0.0.1:20241/metrics";
     private static final DateTimeFormatter LOG_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
@@ -58,9 +58,7 @@ public class RemoteLauncherService {
     private final Path logsDir = projectRoot.resolve("logs");
     private final Path generatedEnvPath = projectRoot.resolve(".env.generated");
 
-    private volatile Process managedCloudflaredProcess;
-    private volatile Path cloudflaredStdoutPath;
-    private volatile Path cloudflaredStderrPath;
+    private final Map<ManagedMcpKind, ManagedTunnelProcess> managedTunnelProcesses = new EnumMap<>(ManagedMcpKind.class);
 
     /**
      * Autentica al usuario desktop contra el control plane y devuelve una sesion lista para usar.
@@ -147,56 +145,71 @@ public class RemoteLauncherService {
      * Arranca o reutiliza un proceso local de {@code cloudflared} usando el token remoto del bootstrap.
      */
     public void startManagedTunnel(BootstrapResponse bootstrap) throws IOException, InterruptedException {
+        ManagedMcpKind kind = resolveKind(bootstrap.resourceKey());
+        startManagedTunnel(kind, bootstrap);
+    }
+
+    public void startManagedTunnel(ManagedMcpKind kind, BootstrapResponse bootstrap) throws IOException, InterruptedException {
         if (!bootstrap.cloudflaredManagedRemotely()) {
             throw new IOException("El bootstrap actual no permite gestionar cloudflared automaticamente.");
         }
 
         String cloudflaredCommand = resolveCloudflaredCommand();
-        if (managedCloudflaredProcess != null && managedCloudflaredProcess.isAlive()) {
-            log("Reutilizando cloudflared ya lanzado por la app.");
+        ManagedTunnelProcess currentProcess = managedTunnelProcesses.get(kind);
+        if (currentProcess != null && currentProcess.process().isAlive()) {
+            log("Reutilizando cloudflared ya lanzado para " + kind.displayName() + ".");
             return;
         }
 
-        if (isUrlReady(CLOUDFLARED_METRICS_URL)) {
-            log("Reutilizando cloudflared ya activo.");
+        String metricsUrl = metricsUrl(kind);
+        if (isUrlReady(metricsUrl)) {
+            log("Reutilizando cloudflared ya activo para " + kind.displayName() + ".");
             return;
         }
 
-        CloudflaredLogFiles logFiles = createCloudflaredLogFiles();
-        cloudflaredStdoutPath = logFiles.stdout();
-        cloudflaredStderrPath = logFiles.stderr();
+        CloudflaredLogFiles logFiles = createCloudflaredLogFiles(kind);
 
-        log("Arrancando cloudflared con tunnel token remoto.");
+        log("Arrancando cloudflared para " + kind.displayName() + " con tunnel token remoto.");
         ProcessBuilder builder = new ProcessBuilder(
                 cloudflaredCommand,
+                "--metrics",
+                "127.0.0.1:" + kind.metricsPort(),
                 "tunnel",
                 "run",
                 "--token",
                 bootstrap.tunnelToken()
         );
         builder.directory(projectRoot.toFile());
-        builder.redirectOutput(cloudflaredStdoutPath.toFile());
-        builder.redirectError(cloudflaredStderrPath.toFile());
-        managedCloudflaredProcess = builder.start();
+        builder.redirectOutput(logFiles.stdout().toFile());
+        builder.redirectError(logFiles.stderr().toFile());
+        Process process = builder.start();
+        managedTunnelProcesses.put(kind, new ManagedTunnelProcess(process, logFiles.stdout(), logFiles.stderr()));
 
         Thread.sleep(3000);
-        if (!managedCloudflaredProcess.isAlive()) {
-            String error = readTail(cloudflaredStdoutPath) + System.lineSeparator() + readTail(cloudflaredStderrPath);
+        if (!process.isAlive()) {
+            String error = readTail(logFiles.stdout()) + System.lineSeparator() + readTail(logFiles.stderr());
             throw new IOException("cloudflared ha terminado nada mas arrancar. " + error.trim());
         }
 
-        waitForUrl(CLOUDFLARED_METRICS_URL, 30);
-        log("Tunel activo. Logs: " + projectRoot.relativize(cloudflaredStdoutPath) + " y " + projectRoot.relativize(cloudflaredStderrPath));
+        waitForUrl(metricsUrl, 30);
+        log("Tunel activo para " + kind.displayName() + ". Logs: "
+                + projectRoot.relativize(logFiles.stdout()) + " y " + projectRoot.relativize(logFiles.stderr()));
     }
 
     /**
      * Para el proceso de {@code cloudflared} gestionado por esta instancia, si existe.
      */
     public void stopTunnel() {
-        Process process = managedCloudflaredProcess;
-        managedCloudflaredProcess = null;
+        for (ManagedMcpKind kind : ManagedMcpKind.values()) {
+            stopTunnel(kind);
+        }
+    }
+
+    public void stopTunnel(ManagedMcpKind kind) {
+        ManagedTunnelProcess managedTunnelProcess = managedTunnelProcesses.remove(kind);
+        Process process = managedTunnelProcess == null ? null : managedTunnelProcess.process();
         if (process != null && process.isAlive()) {
-            log("Parando cloudflared.");
+            log("Parando cloudflared para " + kind.displayName() + ".");
             process.destroy();
             try {
                 if (!process.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)) {
@@ -230,8 +243,12 @@ public class RemoteLauncherService {
      * Devuelve la lista de bloqueos que impiden arrancar el MCP local.
      */
     public List<String> validatePrerequisites(ControlPlaneSession session) {
+        return validatePrerequisites(session, null);
+    }
+
+    public List<String> validatePrerequisites(ControlPlaneSession session, ManagedMcpKind kind) {
         List<String> errors = new ArrayList<>();
-        if (session == null || session.bootstrap() == null) {
+        if (session == null) {
             errors.add("No hay una sesion activa cargada desde Login.");
             return errors;
         }
@@ -240,18 +257,14 @@ public class RemoteLauncherService {
             errors.add("Este launcher solo soporta CENTRAL_AUTH. Ajusta el backend para no depender de Keycloak local.");
         }
 
+        if (kind != null && session.bootstrapFor(kind.resourceKey()) == null) {
+            errors.add("No hay bootstrap cargado para " + kind.displayName() + ".");
+        }
+
         try {
             resolveCloudflaredCommand();
         } catch (IOException ex) {
             errors.add(ex.getMessage());
-        }
-
-        boolean metricsReady = isUrlReady(CLOUDFLARED_METRICS_URL);
-        if ((managedCloudflaredProcess == null || !managedCloudflaredProcess.isAlive()) && !metricsReady) {
-            errors.add("cloudflared no esta arrancado.");
-        }
-        if (!metricsReady) {
-            errors.add("cloudflared no expone metrics en 127.0.0.1:20241.");
         }
 
         return errors;
@@ -307,6 +320,14 @@ public class RemoteLauncherService {
     @PreDestroy
     public void shutdown() {
         stopTunnel();
+    }
+
+    public boolean isTunnelReady(ManagedMcpKind kind) {
+        return isUrlReady(metricsUrl(kind));
+    }
+
+    public String metricsUrl(ManagedMcpKind kind) {
+        return "http://127.0.0.1:" + kind.metricsPort() + "/metrics";
     }
 
     private void validateBootstrap(BootstrapResponse bootstrap) throws IOException {
@@ -380,12 +401,12 @@ public class RemoteLauncherService {
         return String.join(System.lineSeparator(), lines.subList(start, lines.size()));
     }
 
-    private CloudflaredLogFiles createCloudflaredLogFiles() throws IOException {
+    private CloudflaredLogFiles createCloudflaredLogFiles(ManagedMcpKind kind) throws IOException {
         Files.createDirectories(logsDir);
         String timestamp = LOG_TIMESTAMP_FORMATTER.format(LocalDateTime.now());
         return new CloudflaredLogFiles(
-                logsDir.resolve("cloudflared-" + timestamp + ".stdout.log"),
-                logsDir.resolve("cloudflared-" + timestamp + ".stderr.log")
+                logsDir.resolve("cloudflared-" + kind.resourceKey() + "-" + timestamp + ".stdout.log"),
+                logsDir.resolve("cloudflared-" + kind.resourceKey() + "-" + timestamp + ".stderr.log")
         );
     }
 
@@ -394,5 +415,17 @@ public class RemoteLauncherService {
     }
 
     private record CloudflaredLogFiles(Path stdout, Path stderr) {
+    }
+
+    private ManagedMcpKind resolveKind(String resourceKey) throws IOException {
+        for (ManagedMcpKind kind : ManagedMcpKind.values()) {
+            if (kind.resourceKey().equalsIgnoreCase(resourceKey)) {
+                return kind;
+            }
+        }
+        throw new IOException("Recurso MCP no soportado por el launcher: " + resourceKey);
+    }
+
+    private record ManagedTunnelProcess(Process process, Path stdout, Path stderr) {
     }
 }

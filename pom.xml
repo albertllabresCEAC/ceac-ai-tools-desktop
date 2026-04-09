@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.alber</groupId>
-    <artifactId>outlookdesktop-com-mcp</artifactId>
+    <artifactId>ceac-ia-tools-launcher</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>Outlook Desktop COM MCP</name>
-    <description>Spring Boot API and MCP server for Outlook Desktop via COM</description>
+    <name>CEAC IA Tools Launcher</name>
+    <description>Launcher and local MCP runtimes for CEAC IA Tools</description>
 
     <properties>
         <java.version>21</java.version>

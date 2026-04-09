@@ -1,31 +1,28 @@
-# Remote MCP setup
+# Remote MCP Setup
 
 ## Objetivo
 
-Este cliente ya no gestiona Cloudflare, DNS ni Keycloak por su cuenta. El flujo correcto es:
-
-1. el `dartmaker-tunnel-control-plane` autentica al usuario desktop
-2. el control plane provisiona o recupera el tunnel y devuelve bootstrap
-3. `OutlookDesktop_COM_MCP` consume ese contexto
-4. el cliente arranca `cloudflared` con el `tunnelToken`
-5. la app local publica el MCP protegido por el OAuth central del backend
+Este documento explica como el launcher consume el bootstrap remoto y publica un MCP utilizable por clientes externos.
 
 ## Fuente de verdad
 
-El payload de bootstrap es la fuente de verdad para el runtime local. El cliente no debe inventar ni recalcular:
+El backend es quien decide:
 
-- hostnames publicos
-- issuer
-- JWK set
+- hostname publico
+- tunnel token
+- issuer OAuth
+- JWKS
 - audience
 - scope
 
-Todo eso viene del backend.
+El launcher no recalcula esos valores.
 
-## Payload esperado
+## Contrato minimo de bootstrap
 
-El control plane devuelve, como minimo:
+Cada recurso devuelve:
 
+- `resourceKey`
+- `displayName`
 - `tunnelId`
 - `tunnelToken`
 - `mcpHostname`
@@ -35,151 +32,85 @@ El control plane devuelve, como minimo:
 - `requiredAudience`
 - `requiredScope`
 - `resourceName`
+- `localPort`
 - `authExposureMode`
-- `cloudflaredManagedRemotely`
 
-En `CENTRAL_AUTH` ademas se espera:
+## Recursos actuales
 
-- `authHostname = null`
-- `authPublicBaseUrl = null`
+### Outlook
 
-## Modo soportado por el launcher desktop
+- hostname: `https://<slug>-outlook-mcp.dartmaker.com/mcp`
+- local port: `8080`
+- audience: `outlookdesktop-mcp`
+- scope: `mcp:tools`
 
-El launcher desktop actual exige `CENTRAL_AUTH`.
+### qBid
 
-En este modo el bootstrap devuelve:
+- hostname: `https://<slug>-qbid-mcp.dartmaker.com/mcp`
+- local port: `8082`
+- audience: `qbid-mcp`
+- scope: `qbid:tools`
 
-- `mcpPublicBaseUrl` por usuario
-- `issuerUri` global
-- `jwkSetUri` global
-- `requiredAudience` global
-- `requiredScope` global
+## Arranque real por recurso
 
-El launcher:
+1. validar que existe sesion
+2. recuperar bootstrap del recurso
+3. arrancar `cloudflared` con su token
+4. arrancar el runtime local del recurso
+5. comprobar `/.well-known/oauth-protected-resource`
+6. usar la URL publica desde ChatGPT o Claude
 
-- arranca `cloudflared`
-- no arranca Keycloak local
-- no necesita exponer `slug-auth`
-- consume `issuerUri` y `jwkSetUri` ya calculados por el backend
+## Verificaciones utiles
 
-Si el backend se configura en `LOCAL_AUTH`, el launcher bloquea el arranque del MCP porque ese modo ya no forma parte del runtime soportado por el desktop.
+### Outlook local
 
-## Variables del launcher
+- `http://localhost:8080/.well-known/oauth-protected-resource`
+- `http://localhost:8080/mcp`
 
-Puedes definirlas a mano o dejar que `run.bat` cargue los defaults.
+### qBid local
 
-Variables:
+- `http://localhost:8082/.well-known/oauth-protected-resource`
+- `http://localhost:8082/mcp`
 
-- `CONTROL_PLANE_URL`
-- `CONTROL_PLANE_LOGIN_USERNAME`
-- `CONTROL_PLANE_LOGIN_PASSWORD`
-- `CONTROL_PLANE_MACHINE_ID`
-- `CONTROL_PLANE_CLIENT_VERSION`
-- `CLOUDFLARED_CMD`
+### Publico
 
-Ejemplo manual:
+- `https://<slug>-outlook-mcp.dartmaker.com/.well-known/oauth-protected-resource`
+- `https://<slug>-outlook-mcp.dartmaker.com/mcp`
+- `https://<slug>-qbid-mcp.dartmaker.com/.well-known/oauth-protected-resource`
+- `https://<slug>-qbid-mcp.dartmaker.com/mcp`
 
-```powershell
-$env:CONTROL_PLANE_URL = "https://control.example.com"
-$env:CONTROL_PLANE_LOGIN_USERNAME = "desktop-user"
-$env:CONTROL_PLANE_LOGIN_PASSWORD = "change-me"
-$env:CONTROL_PLANE_MACHINE_ID = $env:COMPUTERNAME
-$env:CONTROL_PLANE_CLIENT_VERSION = "1.0.0"
-```
+## Clientes MCP externos
 
-## Arranque recomendado
+La URL que se registra en ChatGPT o Claude es siempre la del endpoint MCP:
 
-### Entorno central
-
-```powershell
-.\run.bat
-```
-
-Flujo esperado en la UI:
-
-1. en `Login`, el usuario se autentica contra el control plane
-2. el backend devuelve `bootstrap`
-3. en `MCP`, el launcher arranca `cloudflared`
-4. en `MCP`, el launcher arranca la app Spring Boot local
-
-### Entorno local completo
-
-```powershell
-.\run-full-local.bat
-```
-
-Este script:
-
-- levanta PostgreSQL y Keycloak del control plane
-- arranca el control plane local
-- precarga credenciales de desktop
-- abre el launcher
-
-`run-dev.bat` sigue existiendo como alias legado, pero el nombre recomendado para este flujo es `run-full-local.bat`.
-
-## Que hace el launcher al arrancar el MCP
-
-1. valida que existe sesion activa
-2. valida que el bootstrap usa `CENTRAL_AUTH`
-3. valida que `cloudflared` esta disponible
-4. arranca o reutiliza `cloudflared`
-5. verifica `127.0.0.1:20241/metrics`
-6. escribe `.env.generated`
-7. arranca Spring Boot local con las properties derivadas
-
-## Verificacion local
-
-Comprueba localmente:
-
-```text
-http://localhost:8080/.well-known/oauth-protected-resource
-http://localhost:8080/mcp
-```
-
-Y publicamente, si el tunnel esta arriba:
-
-```text
-https://<slug>-mcp.<base-domain>/.well-known/oauth-protected-resource
-https://<slug>-mcp.<base-domain>/mcp
-```
-
-## Contrato OAuth del recurso protegido
-
-La app local publica:
-
-- `authorization_servers`
-- `scopes_supported`
-- `resource`
-
-Y valida:
-
-- `iss`
-- `aud`
-- `scope`
-
-Claims esperados:
-
-- `iss`: debe coincidir con `MCP_OAUTH_ISSUER_URI`
-- `aud`: debe incluir `MCP_OAUTH_REQUIRED_AUDIENCE`
-- `scope`: debe incluir `MCP_OAUTH_REQUIRED_SCOPE`
-
-## Uso desde ChatGPT o Claude
-
-La URL que se debe registrar en el cliente MCP es:
-
-- `https://<slug>-mcp.<base-domain>/mcp`
+- `https://<slug>-outlook-mcp.dartmaker.com/mcp`
+- `https://<slug>-qbid-mcp.dartmaker.com/mcp`
 
 No la raiz del dominio.
 
-Ademas, para que funcione:
+## Problemas tipicos
 
-- el launcher debe haber terminado `Login -> Arrancar MCP`
-- el issuer publicado no puede ser `localhost`
-- Keycloak debe permitir Dynamic Client Registration para el host del cliente MCP
+### El cliente externo dice que el servidor no soporta OAuth
 
-## Notas operativas
+Revisar:
 
-- Si el PC esta apagado, el MCP deja de estar disponible.
-- Outlook COM sigue siendo local y Windows-only.
-- El control plane es el unico que debe gestionar Cloudflare Tunnel y DNS.
-- El cliente no debe volver a crear rutas DNS ni hacer login administrativo a Cloudflare.
+- `/.well-known/oauth-protected-resource`
+- que `authorization_servers` apunte a `https://auth.dartmaker.com/...`
+- que no haya `localhost` en issuer o JWKS
+
+### El cliente externo no puede llegar al servidor
+
+Revisar:
+
+- tunnel arriba
+- DNS correcto en Cloudflare
+- handshake TLS correcto
+- `cloudflared` local vivo
+
+### El login OAuth falla
+
+Revisar:
+
+- audience y scope del recurso
+- dynamic client registration en Keycloak
+- whitelist de hosts de ChatGPT y Claude
