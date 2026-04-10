@@ -7,3 +7,4 @@ public record BootstrapRequest(
         String clientVersion
 ) {
 }
+

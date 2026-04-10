@@ -1,7 +1,6 @@
 package tools.ceac.ai.desktop.ui;
 
-import tools.ceac.ai.mcp.outlook.OutlookMcpRuntimeApplication;
-import tools.ceac.ai.mcp.campus.interfaces.desktop.CampusEmbeddedPanel;
+import tools.ceac.ai.modules.campus.interfaces.desktop.CampusEmbeddedPanel;
 import tools.ceac.ai.desktop.launcher.AuthExposureMode;
 import tools.ceac.ai.desktop.launcher.BootstrapResponse;
 import tools.ceac.ai.desktop.launcher.CampusRuntimeService;
@@ -10,6 +9,7 @@ import tools.ceac.ai.desktop.launcher.ClientLoginRequest;
 import tools.ceac.ai.desktop.launcher.ClientLoginResponse;
 import tools.ceac.ai.desktop.launcher.ControlPlaneSession;
 import tools.ceac.ai.desktop.launcher.ManagedMcpKind;
+import tools.ceac.ai.desktop.launcher.OutlookRuntimeService;
 import tools.ceac.ai.desktop.launcher.QbidRuntimeService;
 import tools.ceac.ai.desktop.launcher.RemoteLauncherService;
 import tools.ceac.ai.desktop.launcher.RuntimeSettings;
@@ -43,8 +43,6 @@ import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * Main Swing window of CEAC AI Tools Desktop.
@@ -61,7 +59,7 @@ import org.springframework.context.ConfigurableApplicationContext;
  * <p>It deliberately does not contain provisioning logic or direct Cloudflare management. Those
  * concerns stay in {@code RemoteLauncherService} and in the backend control plane.
  */
-class CeacLauncherWindow {
+public class CeacLauncherWindow {
 
     private static final String DEFAULT_CONTROL_PLANE_URL = "https://control.dartmaker.com";
     private static final String DEFAULT_CLIENT_VERSION = "1.0.0";
@@ -71,11 +69,11 @@ class CeacLauncherWindow {
     private static final Color MUTED = new Color(90, 90, 90);
 
     private final RemoteLauncherService remoteLauncherService = new RemoteLauncherService();
+    private final OutlookRuntimeService outlookRuntimeService = new OutlookRuntimeService();
     private final QbidRuntimeService qbidRuntimeService = new QbidRuntimeService();
     private final CampusRuntimeService campusRuntimeService = new CampusRuntimeService();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Consumer<String> logConsumer = this::appendLog;
-    private final Consumer<AppRuntimeState> outlookStateConsumer = this::updateOutlookRuntimeState;
     private final boolean developmentMode = Boolean.parseBoolean(System.getenv().getOrDefault("DARTMAKER_DEV_MODE", "false"));
 
     private JFrame frame;
@@ -98,7 +96,6 @@ class CeacLauncherWindow {
     private JPasswordField qbidPasswordField;
     private JPanel campusPanelHost;
 
-    private ConfigurableApplicationContext outlookContext;
     private ControlPlaneSession controlPlaneSession;
 
     public void show() {
@@ -152,7 +149,6 @@ class CeacLauncherWindow {
         frame.setSize(1200, 900);
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
-        LauncherEvents.register(outlookStateConsumer);
     }
 
     private JPanel buildLoginTab() {
@@ -218,7 +214,7 @@ class CeacLauncherWindow {
         if (kind == ManagedMcpKind.OUTLOOK) {
             outlookWidgets = widgets;
             top.add(buildResourceBootstrapCard(widgets));
-            top.add(buildResourceRuntimeCard(widgets, false));
+            top.add(buildResourceRuntimeCard(widgets));
             panel.add(top, BorderLayout.CENTER);
             panel.add(buildOutlookActions(widgets), BorderLayout.SOUTH);
         } else {
@@ -238,7 +234,7 @@ class CeacLauncherWindow {
         campusWidgets = new ResourceWidgets(ManagedMcpKind.CAMPUS);
         JPanel top = new JPanel(new GridLayout(1, 2, 12, 12));
         top.add(buildResourceBootstrapCard(campusWidgets));
-        top.add(buildResourceRuntimeCard(campusWidgets, false));
+        top.add(buildResourceRuntimeCard(campusWidgets));
 
         campusPanelHost = new JPanel(new BorderLayout());
         campusPanelHost.setBorder(BorderFactory.createTitledBorder("Login Campus"));
@@ -291,7 +287,7 @@ class CeacLauncherWindow {
         return card;
     }
 
-    private JPanel buildResourceRuntimeCard(ResourceWidgets widgets, boolean qbid) {
+    private JPanel buildResourceRuntimeCard(ResourceWidgets widgets) {
         JPanel card = card("Estado " + widgets.kind.displayName());
         JPanel form = formPanel();
         widgets.prereq = valueLabel("Prerequisites: pending");
@@ -419,16 +415,15 @@ class CeacLauncherWindow {
         set(outlookWidgets.tunnel, "Tunnel: activo", OK);
         RuntimeSettings settings = remoteLauncherService.runtimeSettingsFromBootstrap(bootstrap);
         remoteLauncherService.writeGeneratedEnv(settings);
-        LauncherEvents.publish(new AppRuntimeState("Starting", null));
-        outlookContext = CompletableFuture.supplyAsync(() -> new SpringApplicationBuilder(OutlookMcpRuntimeApplication.class)
-                .headless(false).properties(settings.toSpringProperties()).run(), executor).join();
+        set(outlookWidgets.app, "Runtime: arrancando", WARN);
+        outlookRuntimeService.start(bootstrap);
+        set(outlookWidgets.app, "Runtime: activo", OK);
+        set(outlookWidgets.swagger, "Swagger: " + outlookRuntimeService.getSwaggerUrl(), OK);
         SwingUtilities.invokeLater(() -> { outlookWidgets.start.setEnabled(false); outlookWidgets.stop.setEnabled(true); });
     }
 
     private void stopOutlook() {
-        ConfigurableApplicationContext context = outlookContext;
-        outlookContext = null;
-        if (context != null) context.close();
+        outlookRuntimeService.stop();
         remoteLauncherService.stopTunnel(ManagedMcpKind.OUTLOOK);
         set(outlookWidgets.tunnel, "Tunnel: detenido", MUTED);
         set(outlookWidgets.app, "Runtime: detenido", MUTED);
@@ -512,18 +507,6 @@ class CeacLauncherWindow {
         BootstrapResponse bootstrap = controlPlaneSession.bootstrapFor(kind.resourceKey());
         if (bootstrap == null) throw new IllegalStateException("No hay bootstrap para " + kind.displayName());
         return bootstrap;
-    }
-
-    private void updateOutlookRuntimeState(AppRuntimeState state) {
-        SwingUtilities.invokeLater(() -> {
-            if (outlookWidgets == null) return;
-            set(outlookWidgets.app, "Runtime: " + state.status(), color(state.status()));
-            outlookWidgets.swagger.setText("Swagger: " + (state.swaggerUrl() == null ? "pending" : state.swaggerUrl()));
-            if (!"Running".equalsIgnoreCase(state.status())) {
-                outlookWidgets.start.setEnabled(controlPlaneSession != null);
-                outlookWidgets.stop.setEnabled(false);
-            }
-        });
     }
 
     private void logout() {
@@ -641,7 +624,6 @@ class CeacLauncherWindow {
         stopOutlook();
         stopQbid();
         stopCampus();
-        LauncherEvents.unregister(outlookStateConsumer);
         GuiLogPublisher.unregister(logConsumer);
         remoteLauncherService.shutdown();
         executor.shutdownNow();
@@ -730,14 +712,6 @@ class CeacLauncherWindow {
         return text == null || text.isBlank() ? "pending" : text;
     }
 
-    private Color color(String status) {
-        if (status == null) return MUTED;
-        String normalized = status.toLowerCase();
-        if (normalized.contains("running") || normalized.contains("activo") || normalized.contains("ready")) return OK;
-        if (normalized.contains("error") || normalized.contains("detenido")) return ERR;
-        return WARN;
-    }
-
     @FunctionalInterface
     private interface ThrowingRunnable { void run() throws Exception; }
 
@@ -761,3 +735,5 @@ class CeacLauncherWindow {
         private ResourceWidgets(ManagedMcpKind kind) { this.kind = kind; }
     }
 }
+
+

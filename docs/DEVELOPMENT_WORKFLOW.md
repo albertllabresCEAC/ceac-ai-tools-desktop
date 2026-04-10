@@ -57,9 +57,9 @@ The canonical name is `run-full-local.bat`.
 Use `run.bat` when you want to:
 
 - sign in to the real control plane
-- start Outlook MCP
-- start Campus MCP
-- start QBid MCP
+- start the Outlook module
+- start the Campus module
+- start the QBid module
 - validate the desktop product as an operator
 
 ### Development mode
@@ -106,7 +106,7 @@ Typical cleanup actions:
 2. log in
 3. start the target resource
 4. verify local endpoints:
-   - Outlook on `8080`
-   - Campus on `8081`
-   - qBid on `8082`
+   - Outlook module on `8080`
+   - Campus module on `8081`
+   - qBid module on `8082`
 5. verify public MCP metadata through the Cloudflare hostname

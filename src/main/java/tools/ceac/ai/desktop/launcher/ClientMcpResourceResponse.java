@@ -9,3 +9,4 @@ public record ClientMcpResourceResponse(
         BootstrapResponse bootstrap
 ) {
 }
+

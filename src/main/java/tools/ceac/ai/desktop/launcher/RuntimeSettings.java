@@ -34,3 +34,4 @@ public record RuntimeSettings(
         return properties;
     }
 }
+

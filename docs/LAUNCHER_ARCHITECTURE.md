@@ -14,6 +14,12 @@ Its job is to:
 
 It is not the control plane.
 
+The launcher should also be distinguished from the resource modules:
+
+- `tools.ceac.ai.desktop` is the product shell
+- `tools.ceac.ai.modules.*` are the functional modules
+- `interfaces.mcp` is only one interface surface inside each module
+
 ## Package boundaries
 
 ### `tools.ceac.ai.desktop`
@@ -39,22 +45,43 @@ Infrastructure layer for:
 - local runtime startup
 - local session state
 
-### `tools.ceac.ai.mcp.outlook`
+### `tools.ceac.ai.modules.outlook`
 
-Outlook runtime only.
+Outlook module only.
 
-### `tools.ceac.ai.mcp.campus`
+Outlook now uses the same broad package vocabulary as the other runtimes:
 
-Campus runtime only, including embedded JCEF login and Moodle session reuse.
+- `application`
+- `domain`
+- `infrastructure`
+- `interfaces`
 
-### `tools.ceac.ai.mcp.qbid`
+### `tools.ceac.ai.modules.campus`
 
-qBid runtime only.
+Campus module only, including embedded JCEF login and Moodle session reuse.
+
+Campus is the most explicitly layered runtime:
+
+- `application`
+- `domain`
+- `infrastructure`
+- `interfaces`
+
+### `tools.ceac.ai.modules.qbid`
+
+qBid module only.
+
+qBid now follows the same broad package vocabulary as Campus:
+
+- `application`
+- `domain`
+- `infrastructure`
+- `interfaces`
 
 The important rule is:
 
 - the shell owns the UI and orchestration
-- each MCP package owns only its runtime behavior
+- each resource module owns only its runtime behavior
 
 ## Main launcher components
 
@@ -90,8 +117,8 @@ Contains:
 - control-plane base URL
 - desktop token
 - resolved identity
-- bootstrap per resource
-- list of available resources
+- bootstrap per resource module
+- list of available resource modules
 
 ### `QbidRuntimeService`
 
@@ -112,6 +139,16 @@ Responsibilities:
 - inject OAuth and public URL settings from bootstrap
 - expose the embeddable JCEF panel used by the `Campus MCP` tab
 - start and stop the Campus runtime
+
+### `OutlookRuntimeService`
+
+Runs Outlook as an embedded Spring context.
+
+Responsibilities:
+
+- start and stop the Outlook runtime
+- wait for local OAuth metadata to become reachable
+- keep Outlook startup symmetric with qBid and Campus
 
 ## UI model
 
@@ -197,7 +234,7 @@ Depends on:
 
 ## Why the runtimes are separate
 
-Each MCP resource has:
+Each resource module has:
 
 - a different local port
 - a different public hostname
@@ -206,7 +243,14 @@ Each MCP resource has:
 - different local prerequisites
 - different local UI requirements
 
-The launcher therefore models "multiple MCP resources under one desktop session", not "one MCP with multiple modes".
+The launcher therefore models "multiple resource modules under one desktop session", not "one MCP with multiple modes".
+
+The shell now treats all three runtimes through the same high-level pattern:
+
+1. validate prerequisites
+2. start `cloudflared`
+3. start the embedded runtime service
+4. expose the public MCP URL and local Swagger URL
 
 ## Security rules
 
@@ -225,3 +269,7 @@ Primary files:
 - [`src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java)
 - [`src/main/java/tools/ceac/ai/desktop/launcher/CampusRuntimeService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/CampusRuntimeService.java)
 - [`src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java`](../src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java)
+- [`src/main/java/tools/ceac/ai/modules/outlook/package-info.java`](../src/main/java/tools/ceac/ai/modules/outlook/package-info.java)
+- [`src/main/java/tools/ceac/ai/modules/campus/package-info.java`](../src/main/java/tools/ceac/ai/modules/campus/package-info.java)
+- [`src/main/java/tools/ceac/ai/modules/qbid/package-info.java`](../src/main/java/tools/ceac/ai/modules/qbid/package-info.java)
+

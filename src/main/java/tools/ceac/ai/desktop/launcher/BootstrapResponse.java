@@ -25,3 +25,4 @@ public record BootstrapResponse(
         boolean cloudflaredManagedRemotely
 ) {
 }
+

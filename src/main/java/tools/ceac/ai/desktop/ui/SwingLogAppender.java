@@ -29,3 +29,4 @@ public class SwingLogAppender extends AppenderBase<ILoggingEvent> {
         }
     }
 }
+

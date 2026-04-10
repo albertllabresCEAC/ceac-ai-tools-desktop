@@ -13,3 +13,4 @@ public record CommandResult(
         return (stdout == null ? "" : stdout) + (stderr == null ? "" : System.lineSeparator() + stderr);
     }
 }
+

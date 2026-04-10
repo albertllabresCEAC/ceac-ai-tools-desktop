@@ -1,8 +1,8 @@
 # CEAC AI Tools Desktop
 
-Windows desktop launcher for CEAC AI Tools.
+Windows desktop product for CEAC AI Tools.
 
-The launcher authenticates against the central control plane and exposes local MCP runtimes per resource.
+The desktop shell authenticates against the central control plane and then orchestrates one local runtime per enabled resource module.
 
 Current product tabs:
 
@@ -15,22 +15,37 @@ The launcher does not manage Cloudflare, DNS or Keycloak administration directly
 
 ## Product structure
 
-The desktop application now contains three layers:
+The desktop application now contains two top-level areas:
 
-1. control-plane session shell
+1. desktop shell
    - login against `https://control.dartmaker.com`
    - resource bootstrap
    - local tunnel lifecycle
-2. local MCP runtimes
+   - shared runtime orchestration
+2. resource modules
    - Outlook via COM
    - Campus via embedded JCEF login plus HTTP session reuse
    - qBid via HTTP scraping
-3. public MCP exposure
+3. public MCP exposure per resource
    - `cloudflared` per resource
    - OAuth metadata per resource
    - public MCP URL consumed by ChatGPT, Claude and others
 
-All three runtimes now live inside the same Maven project.
+All resource modules now live inside the same Maven project and follow the same broad package vocabulary.
+
+The interface convention is consistent across modules:
+
+- REST and OpenAPI controllers live under `interfaces.api`
+- MCP tools live under `interfaces.mcp`
+- OAuth protected-resource metadata lives under `interfaces.oauth`
+
+Internal structure still differs by module because the implementation model is different:
+
+- Outlook is COM-oriented, but now also follows the broad `application / domain / infrastructure /
+  interfaces` split
+- Campus keeps the most explicit layered architecture
+- qBid now follows the same broad `application / domain / infrastructure / interfaces` split, with
+  a stronger parser-heavy infrastructure because it is scraping-heavy
 
 ## Package map
 
@@ -40,12 +55,15 @@ All three runtimes now live inside the same Maven project.
   - control-plane integration, bootstrap handling and `cloudflared`
 - `tools.ceac.ai.desktop.ui`
   - Swing user interface
-- `tools.ceac.ai.mcp.outlook`
-  - Outlook runtime
-- `tools.ceac.ai.mcp.campus`
-  - Campus runtime
-- `tools.ceac.ai.mcp.qbid`
-  - qBid runtime
+- `tools.ceac.ai.modules.outlook`
+  - Outlook resource module
+  - `application`, `domain`, `infrastructure`, `interfaces`
+- `tools.ceac.ai.modules.campus`
+  - Campus resource module
+  - `application`, `domain`, `infrastructure`, `interfaces`
+- `tools.ceac.ai.modules.qbid`
+  - qBid resource module
+  - `application`, `domain`, `infrastructure`, `interfaces`
 
 ## What the launcher does
 
@@ -81,7 +99,7 @@ Actions:
 - `Iniciar sesion en panel de control`
 - `Cerrar sesion`
 
-The result of login is a `ControlPlaneSession` that carries bootstrap for every available resource.
+The result of login is a `ControlPlaneSession` that carries bootstrap for every available resource module.
 
 ### Outlook MCP
 
@@ -244,6 +262,12 @@ $env:CONTROL_PLANE_LOGIN_PASSWORD = "your-password"
 5. start the resource
 6. use the public URL `https://<slug>-<resource>-mcp.dartmaker.com/mcp` from ChatGPT, Claude or another MCP client
 
+## Architecture summary
+
+- `desktop` owns product UI, control-plane login, bootstrap and tunnel lifecycle
+- `modules.*` own resource-specific runtime behavior
+- `interfaces.mcp` is only one interface of a module, not the module itself
+
 ## OAuth summary
 
 The launcher only supports `CENTRAL_AUTH`.
@@ -290,3 +314,4 @@ These are runtime artifacts and should not be treated as source-of-truth documen
 - [`docs/LAUNCHER_ARCHITECTURE.md`](docs/LAUNCHER_ARCHITECTURE.md)
 - [`docs/REMOTE_MCP_SETUP.md`](docs/REMOTE_MCP_SETUP.md)
 - [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)
+

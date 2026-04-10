@@ -7,3 +7,4 @@ public record ClientLoginRequest(
         String clientVersion
 ) {
 }
+

@@ -35,35 +35,35 @@ Each resource returns:
 - `resourceName`
 - `authExposureMode`
 
-## Current resources
+## Current resource modules
 
-### Outlook
+### Outlook module
 
 - public MCP URL: `https://<slug>-outlook-mcp.dartmaker.com/mcp`
 - local port: `8080`
 - audience: `outlookdesktop-mcp`
 - scope: `mcp:tools`
 
-### Campus
+### Campus module
 
 - public MCP URL: `https://<slug>-campus-mcp.dartmaker.com/mcp`
 - local port: `8081`
 - audience: `campus-mcp`
 - scope: `campus:tools`
 
-### qBid
+### qBid module
 
 - public MCP URL: `https://<slug>-qbid-mcp.dartmaker.com/mcp`
 - local port: `8082`
 - audience: `qbid-mcp`
 - scope: `qbid:tools`
 
-## Actual startup sequence per resource
+## Actual startup sequence per resource module
 
 1. validate that a desktop session exists
-2. retrieve the bootstrap for the selected resource
+2. retrieve the bootstrap for the selected resource module
 3. start `cloudflared` with the remote token
-4. start the local runtime of the resource
+4. start the local runtime of the resource module
 5. verify `/.well-known/oauth-protected-resource`
 6. use the public URL from ChatGPT, Claude or another MCP client
 
