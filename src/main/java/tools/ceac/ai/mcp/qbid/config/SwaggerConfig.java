@@ -16,8 +16,8 @@ public class SwaggerConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("CEAC IA Tools - QBid MCP")
-                        .description("API REST y runtime MCP para qBID / sBID dentro de CEAC IA Tools")
+                        .title("CEAC AI Tools - QBid MCP")
+                        .description("API REST y runtime MCP para qBID / sBID dentro de CEAC AI Tools")
                         .version("1.0.0"))
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth",

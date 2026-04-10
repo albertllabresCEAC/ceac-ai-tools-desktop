@@ -27,7 +27,7 @@ public class AlumnoController {
         }
     }
 
-    /** Ver ficha del alumno/a â€” datos personales, acadÃ©micos y de contacto */
+    /** Ver ficha del alumno/a — datos personales, académicos y de contacto */
     @GetMapping("/{codAlumno}")
     public ResponseEntity<FichaAlumnoDTO> getFicha(
             @RequestHeader("Authorization") String auth,

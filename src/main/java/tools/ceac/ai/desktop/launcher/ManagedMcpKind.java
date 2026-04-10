@@ -13,7 +13,8 @@ package tools.ceac.ai.desktop.launcher;
  */
 public enum ManagedMcpKind {
     OUTLOOK("outlook", "Outlook MCP", 20241, 8080),
-    QBID("qbid", "QBid MCP", 20242, 8082);
+    QBID("qbid", "QBid MCP", 20242, 8082),
+    CAMPUS("campus", "Campus MCP", 20243, 8081);
 
     private final String resourceKey;
     private final String displayName;

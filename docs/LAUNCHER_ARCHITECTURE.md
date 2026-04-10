@@ -1,143 +1,227 @@
 # Launcher Architecture
 
-## Objetivo
+## Goal
 
-El launcher desktop es la capa de orquestacion local de CEAC IA Tools. Su funcion es:
+The desktop launcher is the local orchestration layer of CEAC AI Tools.
 
-- autenticar al usuario contra el control plane
-- cargar bootstrap por recurso
-- arrancar tunnels locales
-- arrancar runtimes MCP locales
+Its job is to:
 
-No es el plano de control.
+- authenticate the user against the control plane
+- load bootstrap per resource
+- start local tunnels
+- start local MCP runtimes
+- host resource-specific embedded UI when a runtime needs it, such as Campus
 
-## Componentes principales
+It is not the control plane.
+
+## Package boundaries
+
+### `tools.ceac.ai.desktop`
+
+Desktop shell entry point.
+
+### `tools.ceac.ai.desktop.ui`
+
+Swing user interface for:
+
+- login
+- status display
+- per-resource actions
+- operator logs
+
+### `tools.ceac.ai.desktop.launcher`
+
+Infrastructure layer for:
+
+- login against the control plane
+- bootstrap retrieval
+- `cloudflared` lifecycle
+- local runtime startup
+- local session state
+
+### `tools.ceac.ai.mcp.outlook`
+
+Outlook runtime only.
+
+### `tools.ceac.ai.mcp.campus`
+
+Campus runtime only, including embedded JCEF login and Moodle session reuse.
+
+### `tools.ceac.ai.mcp.qbid`
+
+qBid runtime only.
+
+The important rule is:
+
+- the shell owns the UI and orchestration
+- each MCP package owns only its runtime behavior
+
+## Main launcher components
 
 ### `CeacLauncherWindow`
 
-Construye y gobierna la UI Swing.
+Builds and governs the Swing UI.
 
-Responsabilidades:
+Responsibilities:
 
-- mantener el estado de sesion
-- reflejar el bootstrap en pantalla
-- coordinar acciones de cada pestana
-- mostrar actividad y errores operativos
+- keep session state in memory
+- project bootstrap values into the UI
+- coordinate actions on each tab
+- show operational logs and failures
 
 ### `RemoteLauncherService`
 
-Es el adaptador del launcher al control plane y a `cloudflared`.
+Adapter between the launcher, the control plane and `cloudflared`.
 
-Responsabilidades:
+Responsibilities:
 
 - `POST /api/client/login`
 - `POST /api/client/bootstrap`
-- validacion basica del bootstrap
-- arranque y parada de `cloudflared` por recurso
-- generacion de `.env.generated`
-
-### `QbidRuntimeService`
-
-Gestiona el runtime qBid como contexto Spring interno del mismo desktop.
-
-Responsabilidades:
-
-- validar credenciales qBid
-- arrancar el runtime qBid embebido
-- inyectarle las variables OAuth/publicas derivadas del bootstrap
-- parar el contexto y reportar Swagger
+- minimal bootstrap validation
+- start and stop one `cloudflared` process per resource
+- generate `.env.generated`
 
 ### `ControlPlaneSession`
 
-Representa la sesion autenticada del desktop.
+Represents the authenticated desktop session.
 
-Contiene:
+Contains:
 
-- URL del control plane
-- token desktop
-- identidad resuelta
-- bootstrap por recurso
-- lista de recursos disponibles
+- control-plane base URL
+- desktop token
+- resolved identity
+- bootstrap per resource
+- list of available resources
 
-## Modelo de UI
+### `QbidRuntimeService`
 
-### Pestana `Login`
+Runs qBid as an embedded Spring context.
 
-Es global. No depende de un recurso MCP concreto.
+Responsibilities:
 
-Su salida es:
+- validate qBid credentials locally
+- inject OAuth and public URL settings from bootstrap
+- start and stop the qBid runtime
 
-- sesion del desktop
-- bootstrap para `outlook`
-- bootstrap para `qbid`
+### `CampusRuntimeService`
 
-### Pestana `Outlook MCP`
+Runs Campus as an embedded Spring context.
 
-Gestiona el runtime Outlook.
+Responsibilities:
 
-Depende de:
+- inject OAuth and public URL settings from bootstrap
+- expose the embeddable JCEF panel used by the `Campus MCP` tab
+- start and stop the Campus runtime
 
-- sesion activa
-- bootstrap `outlook`
-- `cloudflared`
-- Outlook local
+## UI model
 
-### Pestana `QBid MCP`
+### Login tab
 
-Gestiona el runtime qBid.
+Global desktop session tab.
 
-Depende de:
+Its output is:
 
-- sesion activa
-- bootstrap `qbid`
-- `cloudflared`
-- credenciales qBid locales
+- authenticated desktop session
+- bootstrap for `outlook`
+- bootstrap for `campus`
+- bootstrap for `qbid`
 
-## Flujo Login -> Outlook MCP
+### Outlook MCP tab
 
-1. el usuario se autentica
-2. el launcher guarda `ControlPlaneSession`
-3. la pestana `Outlook MCP` muestra bootstrap
-4. al arrancar:
-   - valida prerequisitos
-   - levanta `cloudflared`
-   - arranca Spring Boot local de Outlook
+Operates the Outlook runtime.
 
-## Flujo Login -> QBid MCP
+Depends on:
 
-1. el usuario se autentica
-2. el launcher guarda `ControlPlaneSession`
-3. la pestana `QBid MCP` muestra bootstrap
-4. el usuario introduce credenciales qBid
-5. el launcher valida esas credenciales contra qBid
-6. al arrancar:
-   - valida prerequisitos
-   - levanta `cloudflared`
-   - arranca el runtime qBid embebido sobre su propio contexto Spring
+- active session
+- Outlook bootstrap
+- local `cloudflared`
+- Outlook installed locally
 
-## Por que los dos MCP van separados
+### Campus MCP tab
 
-Porque son runtimes distintos:
+Operates the Campus runtime.
 
-- distinto puerto local
-- distinto hostname publico
-- distinto tunnel token
-- distinto audience/scope OAuth
-- distinta logica local
+Depends on:
 
-El launcher ya no asume "un solo MCP", sino "varios recursos MCP gestionados por la misma sesion".
+- active session
+- Campus bootstrap
+- local `cloudflared`
+- local JCEF runtime
+- Moodle session acquired through the embedded browser
 
-## Reglas de seguridad
+### QBid MCP tab
 
-- el launcher solo soporta `CENTRAL_AUTH`
-- las credenciales de Cloudflare nunca llegan al cliente
-- las credenciales qBid no se envian al backend
-- el issuer OAuth debe ser publico, no `localhost`
+Operates the qBid runtime.
 
-## Archivos y puntos de extension
+Depends on:
 
-- [CeacLauncherWindow.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/ui/CeacLauncherWindow.java)
-- [RemoteLauncherService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/RemoteLauncherService.java)
-- [QbidRuntimeService.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java)
-- [ManagedMcpKind.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java)
-- [ControlPlaneSession.java](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/src/main/java/tools/ceac/ai/desktop/launcher/ControlPlaneSession.java)
+- active session
+- qBid bootstrap
+- local `cloudflared`
+- local qBid credentials
+
+## Flow: Login -> Outlook MCP
+
+1. the user logs in
+2. the launcher stores `ControlPlaneSession`
+3. the `Outlook MCP` tab displays bootstrap data
+4. on start:
+   - prerequisites are validated
+   - `cloudflared` is started
+   - the Outlook Spring runtime is started
+
+## Flow: Login -> Campus MCP
+
+1. the user logs in against the control plane
+2. the launcher stores `ControlPlaneSession`
+3. the `Campus MCP` tab displays bootstrap data
+4. on start:
+   - prerequisites are validated
+   - `cloudflared` is started
+   - the Campus Spring runtime is started
+   - the JCEF panel is mounted in the tab
+5. the user logs in through the embedded browser
+6. the runtime copies Moodle cookies into the Java HTTP client and reuses that session for REST and MCP
+
+## Flow: Login -> QBid MCP
+
+1. the user logs in
+2. the launcher stores `ControlPlaneSession`
+3. the `QBid MCP` tab displays bootstrap data
+4. the user provides qBid credentials
+5. the launcher validates those credentials locally
+6. on start:
+   - prerequisites are validated
+   - `cloudflared` is started
+   - the qBid Spring runtime is started
+
+## Why the runtimes are separate
+
+Each MCP resource has:
+
+- a different local port
+- a different public hostname
+- a different tunnel token
+- a different OAuth audience and scope
+- different local prerequisites
+- different local UI requirements
+
+The launcher therefore models "multiple MCP resources under one desktop session", not "one MCP with multiple modes".
+
+## Security rules
+
+- the launcher only supports `CENTRAL_AUTH`
+- Cloudflare administrative credentials never reach the desktop
+- qBid credentials never leave the local machine
+- the OAuth issuer announced to external MCP clients must be public, never localhost
+
+## Extension points
+
+Primary files:
+
+- [`src/main/java/tools/ceac/ai/desktop/ui/CeacLauncherWindow.java`](../src/main/java/tools/ceac/ai/desktop/ui/CeacLauncherWindow.java)
+- [`src/main/java/tools/ceac/ai/desktop/launcher/RemoteLauncherService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/RemoteLauncherService.java)
+- [`src/main/java/tools/ceac/ai/desktop/launcher/ControlPlaneSession.java`](../src/main/java/tools/ceac/ai/desktop/launcher/ControlPlaneSession.java)
+- [`src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java)
+- [`src/main/java/tools/ceac/ai/desktop/launcher/CampusRuntimeService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/CampusRuntimeService.java)
+- [`src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java`](../src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java)

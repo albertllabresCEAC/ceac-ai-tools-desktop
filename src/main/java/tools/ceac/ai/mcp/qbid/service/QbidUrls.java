@@ -5,7 +5,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Centraliza todas las URLs de qBID.
- * Si cambia alguna URL, solo se toca aquÃ­.
+ * Si cambia alguna URL, solo se toca aquí.
  */
 @Component
 public class QbidUrls {
@@ -76,7 +76,7 @@ public class QbidUrls {
                 + "&dia=" + fecha;
     }
 
-    /** URL base del formulario de informe periÃ³dico (para POST de guardar/firmar). */
+    /** URL base del formulario de informe periódico (para POST de guardar/firmar). */
     public String guardarInformePeriodico() {
         return base + "/modules/ActivitatValoracioFct";
     }
@@ -90,7 +90,7 @@ public class QbidUrls {
                 + "&hash_code=" + hashCode;
     }
 
-    // â”€â”€ Referencias (documentos PDF) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Referencias (documentos PDF) ──────────────────────────────────────
 
     public String ref07(String conveniId, String conveniProvId, String language) {
         return base + "/modules/Fct?moduleaction=document"
@@ -212,7 +212,7 @@ public class QbidUrls {
                 + "&cod_centre_treball_pk=" + codCentro;
     }
 
-    /** Tab de responsables de acuerdo â€” carga AJAX, responde HTML parcial */
+    /** Tab de responsables de acuerdo — carga AJAX, responde HTML parcial */
     public String tabResponsablesCT(String codCentro, String versioCT) {
         return base + "/modules/PropostaEntitat?moduleaction=tabRespConveniAjax"
                 + "&centreTreballPk=" + codCentro

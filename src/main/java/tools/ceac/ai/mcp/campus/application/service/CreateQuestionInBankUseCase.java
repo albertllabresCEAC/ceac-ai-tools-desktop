@@ -1,0 +1,177 @@
+package tools.ceac.ai.mcp.campus.application.service;
+
+import tools.ceac.ai.mcp.campus.application.port.out.CampusGateway;
+import tools.ceac.ai.mcp.campus.domain.exception.AuthenticationRequiredException;
+import tools.ceac.ai.mcp.campus.domain.model.QuestionBankData;
+import tools.ceac.ai.mcp.campus.infrastructure.campus.MoodleQuestionBankParser;
+import tools.ceac.ai.mcp.campus.infrastructure.campus.MoodleQuestionEditParser;
+import tools.ceac.ai.mcp.campus.infrastructure.config.CampusProperties;
+import tools.ceac.ai.mcp.campus.interfaces.api.dto.UpdateQuizMultichoiceQuestionRequest;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Creates a new multichoice question directly in the Moodle question bank (not attached
+ * to any quiz slot) via a two-step scrape:
+ * <ol>
+ *   <li>GET {@code question/edit.php?cmid=…} → parse courseId, sesskey</li>
+ *   <li>GET the blank question creation form → collect fresh itemids</li>
+ *   <li>POST the merged params to persist the new question.</li>
+ * </ol>
+ *
+ * <p>Differs from {@link CreateQuizMultichoiceQuestionUseCase} only in:
+ * <ul>
+ *   <li>{@code returnurl} → {@code /question/edit.php?cmid={cmid}} (bank page, not quiz edit page)</li>
+ *   <li>{@code appendqnumstring} → {@code ""} (no quiz slot attachment)</li>
+ * </ul>
+ */
+@Service
+public class CreateQuestionInBankUseCase {
+
+    private final CampusGateway campusGateway;
+    private final CampusSessionService sessionService;
+    private final MoodleQuestionBankParser questionBankParser;
+    private final MoodleQuestionEditParser questionEditParser;
+    private final CampusProperties properties;
+
+    public CreateQuestionInBankUseCase(CampusGateway campusGateway,
+                                       CampusSessionService sessionService,
+                                       MoodleQuestionBankParser questionBankParser,
+                                       MoodleQuestionEditParser questionEditParser,
+                                       CampusProperties properties) {
+        this.campusGateway      = campusGateway;
+        this.sessionService     = sessionService;
+        this.questionBankParser = questionBankParser;
+        this.questionEditParser = questionEditParser;
+        this.properties         = properties;
+    }
+
+    /**
+     * @param cmid          Quiz module ID (defines the bank context)
+     * @param categoryValue Full category value from the categories endpoint
+     *                      (e.g. {@code "117056,379267"})
+     * @param req           Question content provided by the API consumer
+     */
+    public void execute(String cmid, String categoryValue,
+                        UpdateQuizMultichoiceQuestionRequest req) {
+        if (!sessionService.isAuthenticated()) {
+            throw new AuthenticationRequiredException("not_authenticated");
+        }
+        try {
+            String base = properties.baseUrl();
+
+            // Step 1 — GET question bank page to extract courseId + sesskey
+            String bankHtml = campusGateway.getQuestionBank(cmid).body();
+            QuestionBankData bankData = questionBankParser.parse(bankHtml, base);
+
+            String categoryId = categoryValue.contains(",")
+                    ? categoryValue.substring(0, categoryValue.indexOf(','))
+                    : categoryValue;
+
+            // Step 2 — GET blank question creation form to collect fresh itemids
+            String formHtml = campusGateway.getNewQuestionForm(
+                    cmid, bankData.courseId(), categoryId, bankData.sesskey()).body();
+            Map<String, String> hidden = questionEditParser.parseHiddenFields(formHtml, base);
+
+            int noanswers = questionEditParser.parseNoAnswers(hidden);
+            int numhints  = questionEditParser.parseNumHints(hidden);
+
+            // Step 3 — POST the new question to the bank (returnurl points to bank page)
+            Map<String, String> params = buildParams(
+                    cmid, bankData.courseId(), categoryValue, req, hidden, noanswers, numhints);
+            campusGateway.postQuestionEdit("", cmid, params);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("question_bank_create_failed", e);
+        } catch (IOException e) {
+            throw new IllegalStateException("question_bank_create_failed", e);
+        }
+    }
+
+    // -------------------------------------------------------------------------
+
+    private Map<String, String> buildParams(String cmid, String courseId,
+                                             String categoryValue,
+                                             UpdateQuizMultichoiceQuestionRequest req,
+                                             Map<String, String> hidden,
+                                             int noanswers, int numhints) {
+        Map<String, String> p = new LinkedHashMap<>();
+
+        // Structural / hardcoded — bank context: returnurl points to question bank, no slot attachment
+        p.put("returnurl",        "/question/edit.php?cmid=" + cmid);
+        p.put("inpopup",          "0");
+        p.put("cmid",             cmid);
+        p.put("courseid",         courseId);
+        p.put("id",               "");
+        p.put("makecopy",         "0");
+        p.put("appendqnumstring", "");
+        p.put("mdlscrollto",      "0");
+        p.put("qtype",            "multichoice");
+        p.put("idnumber",         "");
+
+        // Hidden fields from the blank form (sesskey, itemids, noanswers, numhints, mform_isexpanded_*, _qf__*)
+        p.putAll(hidden);
+
+        p.put("category", categoryValue);
+
+        p.put("name",        str(req.name()));
+        p.put("status",      str(req.status()));
+        p.put("defaultmark", str(req.defaultMark()));
+        p.put("questiontext[text]",   str(req.questionText()));
+        p.put("questiontext[format]", "1");
+        p.put("generalfeedback[text]",   str(req.generalFeedback()));
+        p.put("generalfeedback[format]", "1");
+        p.put("single",     str(req.single()));
+        p.put("shuffleanswers", "0");
+        if ("1".equals(req.shuffleAnswers())) {
+            p.put("shuffleanswers", "1");
+        }
+        p.put("answernumbering",         str(req.answerNumbering()));
+        p.put("showstandardinstruction", str(req.showStandardInstruction()));
+        p.put("penalty",                 str(req.penalty()));
+
+        p.put("correctfeedback[text]",            str(req.correctFeedback()));
+        p.put("correctfeedback[format]",          "1");
+        p.put("partiallycorrectfeedback[text]",   str(req.partiallyCorrectFeedback()));
+        p.put("partiallycorrectfeedback[format]", "1");
+        p.put("incorrectfeedback[text]",          str(req.incorrectFeedback()));
+        p.put("incorrectfeedback[format]",        "1");
+
+        List<UpdateQuizMultichoiceQuestionRequest.AnswerItem> answers =
+                req.answers() != null ? req.answers() : List.of();
+        for (int i = 0; i < noanswers; i++) {
+            if (i < answers.size()) {
+                UpdateQuizMultichoiceQuestionRequest.AnswerItem a = answers.get(i);
+                p.put("answer[" + i + "][text]",   str(a.text()));
+                p.put("fraction[" + i + "]",       str(a.fraction()));
+                p.put("feedback[" + i + "][text]", str(a.feedback()));
+            } else {
+                p.put("answer[" + i + "][text]",   "");
+                p.put("fraction[" + i + "]",       "0.0");
+                p.put("feedback[" + i + "][text]", "");
+            }
+            p.put("answer[" + i + "][format]",   "1");
+            p.put("feedback[" + i + "][format]", "1");
+        }
+
+        List<String> hints = req.hints() != null ? req.hints() : List.of();
+        for (int i = 0; i < numhints; i++) {
+            p.put("hint[" + i + "][text]",   i < hints.size() ? str(hints.get(i)) : "");
+            p.put("hint[" + i + "][format]", "1");
+        }
+
+        p.put("tags",         "_qf__force_multiselect_submission");
+        p.put("submitbutton", "Guardar cambios");
+
+        return p;
+    }
+
+    private static String str(String v) {
+        return v != null ? v : "";
+    }
+}

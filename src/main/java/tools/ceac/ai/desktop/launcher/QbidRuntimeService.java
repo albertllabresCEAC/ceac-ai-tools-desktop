@@ -1,8 +1,5 @@
 package tools.ceac.ai.desktop.launcher;
 
-import tools.ceac.ai.mcp.qbid.CeacQbidRuntimeApplication;
-import tools.ceac.ai.mcp.qbid.mcp.McpAuthHelper;
-import tools.ceac.ai.desktop.ui.GuiLogPublisher;
 import java.io.IOException;
 import java.net.CookieManager;
 import java.net.CookiePolicy;
@@ -17,18 +14,22 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
+import tools.ceac.ai.desktop.ui.GuiLogPublisher;
+import tools.ceac.ai.mcp.qbid.CeacQbidRuntimeApplication;
+import tools.ceac.ai.mcp.qbid.mcp.McpAuthHelper;
 
 /**
- * Gestiona el runtime local de qBid como contexto Spring interno de CEAC IA Tools.
+ * Runs the local qBid runtime as an embedded Spring context.
  *
- * <p>La version anterior lanzaba un segundo proyecto Maven externo. Esa dependencia desaparece:
- * qBid queda integrado dentro del mismo proyecto desktop y se levanta en un contexto aislado sobre
- * su propio puerto local.
+ * <p>The old approach launched a second Maven project. That dependency is gone: qBid now lives
+ * inside the desktop project and starts in an isolated Spring context on its own port.
+ *
+ * <p>The credentials handled here stay local to the machine. They are never forwarded to the
+ * control plane.
  */
 public class QbidRuntimeService {
 
@@ -43,6 +44,9 @@ public class QbidRuntimeService {
     private volatile ConfigurableApplicationContext managedContext;
     private volatile String swaggerUrl;
 
+    /**
+     * Performs a real qBid login roundtrip to validate operator credentials before startup.
+     */
     public void validateCredentials(String username, String password) throws Exception {
         CookieManager cookieManager = new CookieManager();
         cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
@@ -90,6 +94,10 @@ public class QbidRuntimeService {
         }
     }
 
+    /**
+     * Starts qBid on the local port declared by bootstrap and waits until OAuth metadata is
+     * reachable.
+     */
     public void start(BootstrapResponse bootstrap, String username, String password) throws Exception {
         if (managedContext != null && managedContext.isActive()) {
             log("Reutilizando runtime qBid ya activo.");
@@ -98,7 +106,8 @@ public class QbidRuntimeService {
 
         stopLegacyExternalQbidProcesses(bootstrap.localPort());
         if (isLocalPortBusy(bootstrap.localPort())) {
-            throw new IOException("El puerto " + bootstrap.localPort() + " ya esta en uso. Cierra el proceso previo antes de arrancar qBid MCP.");
+            throw new IOException("El puerto " + bootstrap.localPort()
+                    + " ya esta en uso. Cierra el proceso previo antes de arrancar qBid MCP.");
         }
 
         McpAuthHelper.setCredentials(username, password);
@@ -119,6 +128,9 @@ public class QbidRuntimeService {
         }
     }
 
+    /**
+     * Stops the managed qBid runtime if it is active.
+     */
     public void stop() {
         ConfigurableApplicationContext context = managedContext;
         managedContext = null;
@@ -129,10 +141,16 @@ public class QbidRuntimeService {
         }
     }
 
+    /**
+     * Indicates whether the embedded qBid Spring context is alive.
+     */
     public boolean isRunning() {
         return managedContext != null && managedContext.isActive();
     }
 
+    /**
+     * Returns the local Swagger URL when the runtime is active.
+     */
     public String getSwaggerUrl() {
         return swaggerUrl;
     }
@@ -141,7 +159,7 @@ public class QbidRuntimeService {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("server.port", bootstrap.localPort());
         properties.put("server.forward-headers-strategy", "framework");
-        properties.put("spring.application.name", "ceac-ia-tools-qbid-mcp");
+        properties.put("spring.application.name", "ceac-ai-tools-qbid-mcp");
         properties.put("spring.main.headless", "true");
         properties.put("qbid.base-url", QBID_LOGIN_BASE_URL);
         properties.put("qbid.http.connect-timeout", "10000");
@@ -150,7 +168,7 @@ public class QbidRuntimeService {
         properties.put("spring.ai.mcp.server.version", "1.0.0");
         properties.put("spring.ai.mcp.server.type", "SYNC");
         properties.put("spring.ai.mcp.server.protocol", "STREAMABLE");
-        properties.put("spring.ai.mcp.server.instructions", "Runtime MCP de CEAC IA Tools para qBID / sBID.");
+        properties.put("spring.ai.mcp.server.instructions", "Runtime MCP de CEAC AI Tools para qBID / sBID.");
         properties.put("spring.ai.mcp.server.streamable-http.mcp-endpoint", "/mcp");
         properties.put("mcp.remote.public-base-url", bootstrap.mcpPublicBaseUrl());
         properties.put("mcp.remote.mcp-endpoint", "/mcp");

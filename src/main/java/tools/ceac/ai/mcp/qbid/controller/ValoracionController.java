@@ -28,9 +28,9 @@ public class ValoracionController {
     }
 
     /**
-     * Ver valoraciÃ³n final emitida por la empresa.
+     * Ver valoración final emitida por la empresa.
      *
-     * Los parÃ¡metros codVisitaValoracion y codVisita se obtienen del
+     * Los parámetros codVisitaValoracion y codVisita se obtienen del
      * SeguimientoDTO.Valoracion (codVisitaValoracion y codVisitaRef18).
      */
     @GetMapping("/{codConvenio}/{codTemporal}")

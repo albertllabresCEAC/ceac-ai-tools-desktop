@@ -6,10 +6,10 @@ import org.springframework.stereotype.Service;
 import java.util.Base64;
 
 /**
- * Servicio genÃ©rico para descarga de referencias (REF XX) en formato base64.
+ * Servicio genérico para descarga de referencias (REF XX) en formato base64.
  * La URL y el nombre de fichero los construye el caller (controller o MCP tool)
- * usando QbidUrls â€” este servicio no sabe quÃ© tipo de REF estÃ¡ descargando.
- * Para aÃ±adir una nueva referencia basta con aÃ±adir su URL en QbidUrls y
+ * usando QbidUrls — este servicio no sabe qué tipo de REF está descargando.
+ * Para añadir una nueva referencia basta con añadir su URL en QbidUrls y
  * un endpoint en ReferenciaController; este servicio no cambia.
  */
 @Service

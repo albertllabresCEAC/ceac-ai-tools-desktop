@@ -29,9 +29,9 @@ public class ValoracionParser {
                 .build();
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /** Texto de la opciÃ³n selected en un <select name="..."> */
+    /** Texto de la opción selected en un <select name="..."> */
     private String selectedText(Document doc, String selectName) {
         Element sel = doc.selectFirst("select[name=" + selectName + "]");
         if (sel == null) return "";
@@ -52,7 +52,7 @@ public class ValoracionParser {
     }
 
     /**
-     * Tipo de contacto: primero busca un <select name="tipus_visita"> con opciÃ³n
+     * Tipo de contacto: primero busca un <select name="tipus_visita"> con opción
      * seleccionada; si no existe, toma el valor de un <input name="tipus_visita">.
      */
     private String resolverTipoContacto(Document doc) {
@@ -66,7 +66,7 @@ public class ValoracionParser {
 
     /**
      * Signatario: busca el input oculto o de texto que contenga el nombre.
-     * La pÃ¡gina tiene campos como "signatura_empresa" o similar.
+     * La página tiene campos como "signatura_empresa" o similar.
      * Fallback: busca en el texto de un label/span cercano a "empresa"/"centre".
      */
     private String parseSignatario(Document doc, String tipo) {
@@ -89,9 +89,9 @@ public class ValoracionParser {
     }
 
     /**
-     * Criterios de valoraciÃ³n (quest_0 â€¦ quest_20).
+     * Criterios de valoración (quest_0 … quest_20).
      * Cada criterio es un grupo de radios con el mismo name.
-     * El texto de la pregunta estÃ¡ en el label asociado al grupo.
+     * El texto de la pregunta está en el label asociado al grupo.
      */
     private List<Criterio> parseCriterios(Document doc) {
         List<Criterio> result = new ArrayList<>();
@@ -101,10 +101,10 @@ public class ValoracionParser {
             // Busca el radio seleccionado (checked)
             Element checked = doc.selectFirst("input[type=radio][name=" + name + "][checked]");
             if (checked == null) {
-                // TambiÃ©n puede venir sin atributo checked si estÃ¡ deshabilitado/readonly;
+                // También puede venir sin atributo checked si está deshabilitado/readonly;
                 // en ese caso busca por value en los inputs hidden con el mismo name
                 Element hidden = doc.selectFirst("input[type=hidden][name=" + name + "]");
-                if (hidden == null) break;   // ya no hay mÃ¡s criterios
+                if (hidden == null) break;   // ya no hay más criterios
                 String val = hidden.attr("value");
                 String texto = extractCriterioLabel(doc, name, i);
                 String valoracion = resolveValoracionText(doc, name, val);
@@ -130,7 +130,7 @@ public class ValoracionParser {
         Element lbl = doc.selectFirst("label[for=" + name + "]");
         if (lbl != null) return lbl.text().trim();
 
-        // El primer radio del grupo puede estar dentro de un tr/td â€” subimos al row
+        // El primer radio del grupo puede estar dentro de un tr/td — subimos al row
         Element radio = doc.selectFirst("input[name=" + name + "]");
         if (radio != null) {
             // Subir hasta un <tr> o .form-group y buscar el primer texto significativo

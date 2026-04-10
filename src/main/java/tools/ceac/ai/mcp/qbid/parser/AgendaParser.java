@@ -17,7 +17,7 @@ public class AgendaParser {
 
     private static final String BASE_URL = "https://www.empresaiformacio.org/sBid";
 
-    // Extrae dÃ­as del JS: daysMonth[i] = '24-AgCellData';
+    // Extrae días del JS: daysMonth[i] = '24-AgCellData';
     private static final Pattern P_DAYS     = Pattern.compile("daysMonth\\[\\w+\\]\\s*=\\s*'(\\d+)-(AgCell\\w+)'");
     // Extrae fecha del periodo en span label-info
     private static final Pattern P_PERIODO  = Pattern.compile("de\\s*(\\d{2}/\\d{2}/\\d{4})\\s*a\\s*(\\d{2}/\\d{2}/\\d{4})");
@@ -34,7 +34,7 @@ public class AgendaParser {
     public AgendaDTO parseAgenda(String html) {
         Document doc = Jsoup.parse(html);
 
-        // â”€â”€ Cabecera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Cabecera ─────────────────────────────────────────────────────────
         String codAlumno    = "";
         String nombreAlumno = "";
         Element alumnoLink  = doc.selectFirst("a[href*='aid=']");
@@ -49,7 +49,7 @@ public class AgendaParser {
         String profesorTutor = extractLinkTitle(doc, "Profesor/Tutor/a:");
         String estudio       = extractLinkTitle(doc, "Estudio:");
 
-        // â”€â”€ Periodo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Periodo ──────────────────────────────────────────────────────────
         String periodoInicio = "";
         String periodoFin    = "";
         Element periodoSpan  = doc.selectFirst("span.label.label-info");
@@ -58,21 +58,21 @@ public class AgendaParser {
             if (m.find()) { periodoInicio = m.group(1); periodoFin = m.group(2); }
         }
 
-        // â”€â”€ Horas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Horas ────────────────────────────────────────────────────────────
         String horasInformadas  = extractLabelSpan(doc, "Horas informadas:");
         String horasConsignadas = extractLabelSpan(doc, "Horas consignadas:");
         String horasValidadas   = extractLabelSpan(doc, "Horas validadas:");
 
-        // â”€â”€ Calendario â€” extraÃ­do del JS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Calendario — extraído del JS ──────────────────────────────────────
         List<DiaCalendario> calendario = parseCalendario(html);
 
-        // â”€â”€ Ausencias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Ausencias ─────────────────────────────────────────────────────────
         List<Ausencia> ausencias = parseAusencias(doc);
 
-        // â”€â”€ Informes periÃ³dicos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Informes periódicos ───────────────────────────────────────────────
         List<InformePeriodico> informes = parseInformes(doc);
 
-        // â”€â”€ DÃ­a actual â€” tarea del dÃ­a en #tablaTasquesDia â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Día actual — tarea del día en #tablaTasquesDia ────────────────────
         DiaActual diaActual = parseDiaActual(doc);
 
         return AgendaDTO.builder()
@@ -94,7 +94,7 @@ public class AgendaParser {
                 .build();
     }
 
-    // â”€â”€ Calendario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Calendario ────────────────────────────────────────────────────────────
 
     private List<DiaCalendario> parseCalendario(String html) {
         List<DiaCalendario> result = new ArrayList<>();
@@ -105,14 +105,14 @@ public class AgendaParser {
             String estado   = cssClassToEstado(cssClass);
             result.add(DiaCalendario.builder().dia(dia).estado(estado).build());
         }
-        // Ordenar por dÃ­a
+        // Ordenar por día
         result.sort((a, b) -> Integer.compare(a.getDia(), b.getDia()));
         return result;
     }
 
     private String cssClassToEstado(String cssClass) {
         return switch (cssClass) {
-            case "AgCellData"   -> "PENDIENTE";   // dÃ­a laborable sin actividad
+            case "AgCellData"   -> "PENDIENTE";   // día laborable sin actividad
             case "AgCellInfo"   -> "INFORMADO";   // actividad informada
             case "AgCellBaixa"  -> "AUSENCIA";    // ausencia registrada
             case "AgCellFesta"  -> "FESTIVO";
@@ -121,7 +121,7 @@ public class AgendaParser {
         };
     }
 
-    // â”€â”€ Ausencias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Ausencias ─────────────────────────────────────────────────────────────
 
     private List<Ausencia> parseAusencias(Document doc) {
         List<Ausencia> result = new ArrayList<>();
@@ -133,7 +133,7 @@ public class AgendaParser {
             Matcher m    = P_AUSENCIA.matcher(texto);
             if (!m.find()) continue;
 
-            // El motivo estÃ¡ en el <strong>
+            // El motivo está en el <strong>
             String motivo = "";
             Element strong = li.selectFirst("strong");
             if (strong != null) motivo = strong.text().trim();
@@ -147,7 +147,7 @@ public class AgendaParser {
         return result;
     }
 
-    // â”€â”€ Informes periÃ³dicos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Informes periódicos ───────────────────────────────────────────────────
 
     private List<InformePeriodico> parseInformes(Document doc) {
         List<InformePeriodico> result = new ArrayList<>();
@@ -188,7 +188,7 @@ public class AgendaParser {
         return "DESCONOCIDO";
     }
 
-    // â”€â”€ DÃ­a actual â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Día actual ────────────────────────────────────────────────────────────
 
     private DiaActual parseDiaActual(Document doc) {
         Element tablaTasques = doc.getElementById("tablaTasquesDia");
@@ -211,7 +211,7 @@ public class AgendaParser {
                 .build();
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String extractLinkTitle(Document doc, String labelText) {
         for (Element label : doc.select("label.control-label")) {

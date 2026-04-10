@@ -1,85 +1,107 @@
 # CEAC AI Tools Desktop
 
-Cliente desktop Windows de CEAC AI Tools. El launcher autentica contra el control plane central y expone runtimes MCP locales por recurso.
+Windows desktop launcher for CEAC AI Tools.
 
-Estado actual del producto:
+The launcher authenticates against the central control plane and exposes local MCP runtimes per resource.
 
-- una pestana `Login`
-- una pestana `Outlook MCP`
-- una pestana `QBid MCP`
+Current product tabs:
 
-El launcher no administra Cloudflare, DNS ni Keycloak. Todo eso viene resuelto desde `dartmaker-tunnel-control-plane`.
+- `Login`
+- `Outlook MCP`
+- `Campus MCP`
+- `QBid MCP`
 
-## Vision general
+The launcher does not manage Cloudflare, DNS or Keycloak administration directly. Those concerns stay in the control plane.
 
-El producto tiene tres piezas:
+## Product structure
 
-1. `dartmaker-tunnel-control-plane`
-   expone login, bootstrap, provisioning, Cloudflare y contrato OAuth central.
-2. `CEAC IA Tools`
-   es este launcher desktop; mantiene la sesion del usuario y arranca runtimes locales.
-3. runtimes MCP locales
-   hoy:
-   - Outlook por COM
-   - qBid por HTTP scraping
+The desktop application now contains three layers:
 
-Los dos runtimes viven ya dentro del mismo proyecto desktop. qBid ha dejado de depender de un repo Maven externo.
+1. control-plane session shell
+   - login against `https://control.dartmaker.com`
+   - resource bootstrap
+   - local tunnel lifecycle
+2. local MCP runtimes
+   - Outlook via COM
+   - Campus via embedded JCEF login plus HTTP session reuse
+   - qBid via HTTP scraping
+3. public MCP exposure
+   - `cloudflared` per resource
+   - OAuth metadata per resource
+   - public MCP URL consumed by ChatGPT, Claude and others
 
-## Que hace el launcher
+All three runtimes now live inside the same Maven project.
 
-- hace login contra `https://control.dartmaker.com`
-- recibe un `accessToken` desktop y los `bootstrap` disponibles por recurso
-- arranca `cloudflared` local con el `tunnelToken` de cada recurso
-- arranca el runtime local del recurso elegido
-- publica metadata OAuth correcta para ChatGPT, Claude y otros clientes MCP
+## Package map
 
-No hace:
+- `tools.ceac.ai.desktop`
+  - desktop shell and product entry point
+- `tools.ceac.ai.desktop.launcher`
+  - control-plane integration, bootstrap handling and `cloudflared`
+- `tools.ceac.ai.desktop.ui`
+  - Swing user interface
+- `tools.ceac.ai.mcp.outlook`
+  - Outlook runtime
+- `tools.ceac.ai.mcp.campus`
+  - Campus runtime
+- `tools.ceac.ai.mcp.qbid`
+  - qBid runtime
 
-- crear o borrar tunnels
-- tocar DNS de Cloudflare
-- administrar Keycloak
-- almacenar secretos globales de Cloudflare
+## What the launcher does
 
-## Pestanas de la UI
+- logs in against the control plane
+- receives desktop token plus bootstrap per resource
+- starts one local `cloudflared` process per resource
+- starts the corresponding local runtime
+- publishes correct OAuth metadata for external MCP clients
+
+It does not:
+
+- create or delete tunnels directly in Cloudflare
+- edit public DNS directly
+- manage Keycloak realms or trusted-host rules
+- store global Cloudflare secrets
+
+## Tabs
 
 ### Login
 
-Es la sesion contra el panel de control.
+This is the session against the control plane.
 
-Campos visibles:
+Visible fields:
 
 - `Usuario o email`
 - `Password`
-- `Machine ID` solo lectura
-- `Client version` solo lectura
-- `Control plane URL` solo en modo desarrollo
+- `Machine ID` read-only
+- `Client version` read-only
+- `Control plane URL` only in development mode
 
-Acciones:
+Actions:
 
 - `Iniciar sesion en panel de control`
 - `Cerrar sesion`
 
-El login devuelve contexto y bootstrap para todos los recursos habilitados del usuario.
+The result of login is a `ControlPlaneSession` that carries bootstrap for every available resource.
 
 ### Outlook MCP
 
-Es la operativa del runtime Outlook.
+Shows bootstrap and runtime state for Outlook.
 
-Muestra:
+It displays:
 
-- `Tunnel ID`
-- `Host`
-- `Issuer`
-- `JWKS`
-- `Audience`
-- `Scope`
-- `Resource name`
-- estado de prerequisitos
-- estado del tunnel
-- estado del runtime
-- URL de Swagger
+- tunnel id
+- host
+- issuer
+- JWKS
+- audience
+- scope
+- resource name
+- prerequisite state
+- tunnel state
+- runtime state
+- Swagger URL
 
-Acciones:
+Actions:
 
 - `Validar`
 - `Arrancar MCP`
@@ -88,16 +110,36 @@ Acciones:
 - `Abrir Swagger`
 - `Copiar Swagger`
 
+### Campus MCP
+
+Shows bootstrap and runtime state for Campus and embeds the Campus login browser inside the tab.
+
+Campus differs from qBid:
+
+- it does not ask for username and password in Swing fields
+- login happens directly inside the embedded JCEF browser
+- Moodle cookies are copied to the Java HTTP client and then reused by REST and MCP
+
+Actions:
+
+- `Validar estado`
+- `Arrancar MCP`
+- `Parar MCP`
+- `Copiar MCP URL`
+- `Abrir Swagger`
+- `Copiar Swagger`
+- `Reiniciar login Campus`
+
 ### QBid MCP
 
-Es la operativa del runtime qBid integrado.
+Shows bootstrap and runtime state for qBid.
 
-Ademas de la informacion de bootstrap, pide credenciales locales de qBid:
+It also asks for local qBid credentials:
 
 - `Usuario qBid`
 - `Password qBid`
 
-Acciones:
+Actions:
 
 - `Validar credenciales`
 - `Validar estado`
@@ -107,53 +149,61 @@ Acciones:
 - `Abrir Swagger`
 - `Copiar Swagger`
 
-Esas credenciales qBid no viajan al backend ni a Keycloak. Se usan solo en local para arrancar el runtime qBid embebido.
+Those qBid credentials stay local. They are not sent to the control plane or stored in Keycloak.
 
-## Requisitos
+## Requirements
 
 - Windows
 - Java 21
 - Maven 3.9+
-- `cloudflared` instalado o accesible por `PATH`
-- Outlook Desktop instalado para `Outlook MCP`
-- acceso de red a qBid / sBid para `QBid MCP`
+- `cloudflared` installed or available on `PATH`
+- Outlook Desktop installed for Outlook MCP
+- access to qBid or sBid for QBid MCP
+- access to `campus.ceacfp.es` for Campus MCP
+
+Campus also uses:
+
+- `jcef-bundle/`
+- `jcef-cache/`
+
+The first Campus run may take longer because the embedded browser runtime is prepared locally.
 
 ## Scripts
 
 ### `run.bat`
 
-Es el arranque normal del producto.
+Normal product startup.
 
-Hace:
+It:
 
-- fija `DARTMAKER_DEV_MODE=false`
-- usa `https://control.dartmaker.com` como control plane por defecto
-- abre el launcher Swing
+- forces `DARTMAKER_DEV_MODE=false`
+- uses `https://control.dartmaker.com` as the control-plane URL
+- opens the Swing launcher
 
-No hace:
+It does not:
 
-- levantar Postgres
-- levantar Keycloak
-- arrancar el control plane local
+- start PostgreSQL
+- start Keycloak
+- start the local control plane
 
 ### `run-full-local.bat`
 
-Es tooling de desarrollo.
+Full local development startup.
 
-Hace:
+It:
 
-- activa `DARTMAKER_DEV_MODE=true`
-- levanta PostgreSQL y Keycloak del control plane local
-- arranca el control plane local
-- abre el launcher
+- enables `DARTMAKER_DEV_MODE=true`
+- starts PostgreSQL and Keycloak for the local control plane
+- starts the local control plane
+- opens the launcher
 
 ### `run-dev.bat`
 
-Es un alias legado de `run-full-local.bat`.
+Legacy alias for `run-full-local.bat`.
 
-## Variables de entorno utiles
+## Useful environment variables
 
-### Flujo normal
+### Normal usage
 
 - `CONTROL_PLANE_LOGIN_USERNAME`
 - `CONTROL_PLANE_LOGIN_PASSWORD`
@@ -161,7 +211,7 @@ Es un alias legado de `run-full-local.bat`.
 - `CONTROL_PLANE_CLIENT_VERSION`
 - `CLOUDFLARED_CMD`
 
-### Desarrollo
+### Development
 
 - `DARTMAKER_DEV_MODE=true`
 - `CONTROL_PLANE_URL`
@@ -169,63 +219,74 @@ Es un alias legado de `run-full-local.bat`.
 - `DEV_CONTROL_PLANE_PORT`
 - `DEV_CONTROL_PLANE_KEYCLOAK_PORT`
 
-Ejemplo:
+Example:
 
 ```powershell
-$env:CONTROL_PLANE_LOGIN_USERNAME = "tu-usuario"
-$env:CONTROL_PLANE_LOGIN_PASSWORD = "tu-password"
+$env:CONTROL_PLANE_LOGIN_USERNAME = "your-user"
+$env:CONTROL_PLANE_LOGIN_PASSWORD = "your-password"
 .\run.bat
 ```
 
-## Flujo normal de uso
+## Runtime ports
 
-1. ejecutar `run.bat`
-2. autenticarse en `Login`
-3. ir a `Outlook MCP` o `QBid MCP`
-4. validar estado si quieres una comprobacion previa
-5. arrancar el recurso
-6. usar la URL publica `https://<slug>-<resource>.dartmaker.com/mcp` desde ChatGPT, Claude u otro cliente
+- Outlook local runtime: `8080`
+- Campus local runtime: `8081`
+- qBid local runtime: `8082`
 
-## Flujo OAuth resumido
+`cloudflared` metrics ports are separate and managed per resource by the launcher.
 
-El launcher solo soporta `CENTRAL_AUTH`.
+## Normal usage flow
 
-Eso significa:
+1. run `run.bat`
+2. authenticate in `Login`
+3. open `Outlook MCP`, `Campus MCP` or `QBid MCP`
+4. validate state if you want a pre-flight check
+5. start the resource
+6. use the public URL `https://<slug>-<resource>-mcp.dartmaker.com/mcp` from ChatGPT, Claude or another MCP client
 
-- issuer publico central
-- JWKS publico central
-- audience y scope definidos por recurso
-- nada de `localhost` como issuer para clientes externos
+## OAuth summary
 
-Valores tipicos:
+The launcher only supports `CENTRAL_AUTH`.
+
+That means:
+
+- public central issuer
+- public central JWKS
+- audience and scope defined per resource
+- no localhost issuer for external clients
+
+Typical values:
 
 - Outlook:
   - audience `outlookdesktop-mcp`
   - scope `mcp:tools`
+- Campus:
+  - audience `campus-mcp`
+  - scope `campus:tools`
 - qBid:
   - audience `qbid-mcp`
   - scope `qbid:tools`
 
-## URLs locales utiles
+## Useful local URLs
 
 - Outlook Swagger: `http://localhost:8080/swagger-ui/index.html`
 - Outlook MCP: `http://localhost:8080/mcp`
+- Campus Swagger: `http://localhost:8081/swagger-ui/index.html`
+- Campus MCP: `http://localhost:8081/mcp`
 - qBid Swagger: `http://localhost:8082/swagger-ui/index.html`
 - qBid MCP: `http://localhost:8082/mcp`
 
-## Logs y archivos generados
+## Generated files and logs
 
 - `logs/launcher-*.log`
 - `logs/cloudflared-*.stdout.log`
 - `logs/cloudflared-*.stderr.log`
 - `.env.generated`
 
-## Documentacion interna
+These are runtime artifacts and should not be treated as source-of-truth documentation.
 
-- [docs/LAUNCHER_ARCHITECTURE.md](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/docs/LAUNCHER_ARCHITECTURE.md)
-- [docs/REMOTE_MCP_SETUP.md](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/docs/REMOTE_MCP_SETUP.md)
-- [docs/DEVELOPMENT_WORKFLOW.md](/C:/Users/alber/Documents/IdeaProjects/OutlookDesktop_COM_MCP/docs/DEVELOPMENT_WORKFLOW.md)
+## Internal docs
 
-## Estado tecnico
-
-El launcher ya esta adaptado a multi-recurso y qBid queda integrado bajo el mismo artefacto Maven del desktop. El nombre historico del paquete Java sigue siendo `outlookdesktop` en parte del codigo para evitar una migracion de paquetes con bajo retorno, pero el producto visible y la estructura funcional ya son `CEAC IA Tools`.
+- [`docs/LAUNCHER_ARCHITECTURE.md`](docs/LAUNCHER_ARCHITECTURE.md)
+- [`docs/REMOTE_MCP_SETUP.md`](docs/REMOTE_MCP_SETUP.md)
+- [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)

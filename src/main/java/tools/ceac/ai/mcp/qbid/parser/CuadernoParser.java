@@ -26,12 +26,12 @@ public class CuadernoParser {
     public CuadernoDTO parseCuaderno(String html) {
         Document doc = Jsoup.parse(html);
 
-        // codCuaderno â€” del quadernId en el JS de la pÃ¡gina
+        // codCuaderno — del quadernId en el JS de la página
         String codCuaderno = "";
         Matcher mQ = P_CUADERNO.matcher(html);
         if (mQ.find()) codCuaderno = mQ.group(1);
 
-        // codAlumno y nombreAlumno â€” del enlace aid=
+        // codAlumno y nombreAlumno — del enlace aid=
         String codAlumno    = "";
         String nombreAlumno = "";
         Element alumnoLink  = doc.selectFirst("a[href*='aid=']");
@@ -50,15 +50,15 @@ public class CuadernoParser {
         // Horas curriculares
         String horasCurriculares = extractByLabel(doc, "Horas curriculares de la estancia en la empresa:");
 
-        // ExenciÃ³n
-        String exencion = extractByLabel(doc, "ExenciÃ³n:");
+        // Exención
+        String exencion = extractByLabel(doc, "Exención:");
 
-        // hash_code â€” en el input hidden del workingForm
+        // hash_code — en el input hidden del workingForm
         String hashCode = "";
         Element hashInput = doc.selectFirst("input[name='hash_code']");
         if (hashInput != null) hashCode = hashInput.val();
 
-        // Horas informadas / validadas / restantes â€” dentro del tab de acuerdos
+        // Horas informadas / validadas / restantes — dentro del tab de acuerdos
         String horasInformadas         = extractColorSpan(doc, "Horas informadas:");
         String horasValidadas          = extractColorSpan(doc, "Horas validadas:");
         String horasRestantesInformar  = extractColorSpan(doc, "Horas restantes para informar:");
@@ -67,7 +67,7 @@ public class CuadernoParser {
         // Tabla de acuerdos dentro del tab #conveniTab
         List<AcuerdoCuadernoDTO> acuerdos = parseAcuerdos(doc);
 
-        // URLs de documentos REF â€” presentes solo cuando el cuaderno estÃ¡ cualificado
+        // URLs de documentos REF — presentes solo cuando el cuaderno está cualificado
         String urlRef19 = extractRefUrl(doc, "REF19");
         String urlRef20 = extractRefUrl(doc, "REF20");
         String urlRef22 = extractRefUrl(doc, "REF22");
@@ -122,7 +122,7 @@ public class CuadernoParser {
                         horasReales    = m.group(1);
                         horasEstimadas = m.group(2);
                     } else if (!value.isBlank()) {
-                        // Convenio cerrado: "386h 15min" â€” sin estimadas
+                        // Convenio cerrado: "386h 15min" — sin estimadas
                         horasReales = value;
                     }
                 }
@@ -149,7 +149,7 @@ public class CuadernoParser {
         return result;
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private String extractByLabel(Document doc, String labelText) {
         for (Element label : doc.select("label.control-label")) {
@@ -163,7 +163,7 @@ public class CuadernoParser {
 
     /**
      * Extrae el valor del span coloreado que sigue al label con ese texto.
-     * Ejemplo: "Horas informadas:" â†’ span con "0h" en rojo
+     * Ejemplo: "Horas informadas:" → span con "0h" en rojo
      */
     private String extractColorSpan(Document doc, String labelText) {
         for (Element label : doc.select("label.control-label")) {
@@ -180,7 +180,7 @@ public class CuadernoParser {
     }
 
     /**
-     * Busca un botÃ³n cuyo texto sea exactamente refName (ej. "REF19") y extrae
+     * Busca un botón cuyo texto sea exactamente refName (ej. "REF19") y extrae
      * la URL del window.open del onclick. Devuelve "" si no existe.
      */
     private String extractRefUrl(Document doc, String refName) {

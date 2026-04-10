@@ -98,7 +98,7 @@ public class PlanActividadesService {
         parts.add(p("activitats_opc_size",      "0"));
         parts.add(p("activitats_size",          ""));
 
-        // activitatFormativa[] â€” solo actividades editables que el usuario mantiene seleccionadas
+        // activitatFormativa[] — solo actividades editables que el usuario mantiene seleccionadas
         for (ItemPlanDTO act : plan.getActividades()) {
             if (act.isEditable() && seleccionadasSet.contains(act.getId())) {
                 parts.add(p("activitatFormativa[]", act.getId()));

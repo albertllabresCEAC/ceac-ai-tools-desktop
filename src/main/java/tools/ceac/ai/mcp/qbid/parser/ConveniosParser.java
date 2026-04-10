@@ -14,12 +14,12 @@ import java.util.regex.Pattern;
 
 /**
  * Parsea el HTML del listado de convenios de qBID.
- * Solo transforma HTML â†’ DTOs. Sin lÃ³gica de negocio.
+ * Solo transforma HTML → DTOs. Sin lógica de negocio.
  */
 @Component
 public class ConveniosParser {
 
-    // Patrones para extraer cÃ³digos de los onclick de la columna acciones
+    // Patrones para extraer códigos de los onclick de la columna acciones
     private static final Pattern P_CONVENIO  = Pattern.compile("doVeureConveni\\('(\\w+)',\\s*'(\\w+)',\\s*'(\\w+)'");
     private static final Pattern P_CUADERNO  = Pattern.compile("doVeureQuadern\\('(\\w+)'");
 
@@ -48,7 +48,7 @@ public class ConveniosParser {
 
             if (alumno.isBlank()) continue;
 
-            // Extraer cÃ³digos de los onclick
+            // Extraer códigos de los onclick
             Matcher mConvenio = P_CONVENIO.matcher(accionesHtml);
             Matcher mCuaderno = P_CUADERNO.matcher(accionesHtml);
 

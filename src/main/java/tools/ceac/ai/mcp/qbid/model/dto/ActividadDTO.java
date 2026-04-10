@@ -4,7 +4,7 @@ import java.util.List;
 
 public class ActividadDTO {
 
-    // â”€â”€ Cabecera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Cabecera ──────────────────────────────────────────────────────────────
     private String codAlumno;
     private String nombreAlumno;
     private String empresa;
@@ -17,7 +17,7 @@ public class ActividadDTO {
     private String periodoInicio;
     private String periodoFin;
 
-    // â”€â”€ Actividad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Actividad ─────────────────────────────────────────────────────────────
     private String fecha;
     private String fechaTexto;
     private String horasMaximas;
@@ -80,7 +80,7 @@ public class ActividadDTO {
         public ActividadDTO build()                  { return o; }
     }
 
-    // â”€â”€ Actividad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Actividad ─────────────────────────────────────────────────────────────
 
     public static class Actividad {
         private String id;

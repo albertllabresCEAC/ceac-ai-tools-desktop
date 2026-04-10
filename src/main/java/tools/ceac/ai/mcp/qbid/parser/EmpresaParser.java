@@ -23,33 +23,33 @@ public class EmpresaParser {
         return EmpresaDTO.builder()
                 .codEmpresa(formValue(doc, "empresaPk"))
                 .tipoEntidad(parseTipoEntidad(doc))
-                .codigo(byLabel(doc, "CÃ³digo:"))
+                .codigo(byLabel(doc, "Código:"))
                 .estado(byLabel(doc, "Estado:"))
                 .cifNif(byLabel(doc, "CIF/NIF:"))
                 .tipo(byLabel(doc, "Tipo:"))
                 .sector(byLabel(doc, "Sector:"))
-                .numTrabajadores(byLabel(doc, "NÃºmero de trabajadores:"))
+                .numTrabajadores(byLabel(doc, "Número de trabajadores:"))
                 .nombre(byLabel(doc, "Nombre:"))
                 // Datos actividad
-                .ubicacion(byLabel(doc, "UbicaciÃ³n:"))
-                .pais(byLabel(doc, "PaÃ­s:"))
-                .codigoPostal(byLabel(doc, "CÃ³digo Postal:"))
+                .ubicacion(byLabel(doc, "Ubicación:"))
+                .pais(byLabel(doc, "País:"))
+                .codigoPostal(byLabel(doc, "Código Postal:"))
                 .municipio(byLabel(doc, "Municipio/Localidad:"))
-                .via(byLabel(doc, "VÃ­a:"))
-                .numero(byLabel(doc, "NÃºmero:"))
+                .via(byLabel(doc, "Vía:"))
+                .numero(byLabel(doc, "Número:"))
                 .escaleraPisoPuerta(byLabel(doc, "Escalera/Piso/Puerta:"))
-                .restoDireccion(byLabel(doc, "Resto direcciÃ³n:"))
-                .poligono(byLabel(doc, "PolÃ­gono:"))
+                .restoDireccion(byLabel(doc, "Resto dirección:"))
+                .poligono(byLabel(doc, "Polígono:"))
                 .territorio(byLabel(doc, "Territorio:"))
-                .camara(byLabel(doc, "CÃ mara:"))
-                .telefono(byLabel(doc, "TelÃ©fono:"))
+                .camara(byLabel(doc, "Càmara:"))
+                .telefono(byLabel(doc, "Teléfono:"))
                 .fax(byLabel(doc, "Fax:"))
                 // Centros
                 .centros(parseCentros(doc))
                 .build();
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String formValue(Document doc, String name) {
         Element el = doc.selectFirst("input[name=" + name + "]");
@@ -74,7 +74,7 @@ public class EmpresaParser {
 
     /**
      * El tipo de entidad aparece como un label sin valor siguiente:
-     *   <label class="col-sm-4 control-label">Entidad EspaÃ±ola </label>
+     *   <label class="col-sm-4 control-label">Entidad Española </label>
      * Buscamos el primer label dentro del panel principal que NO tenga ":" al final.
      */
     private String parseTipoEntidad(Document doc) {
@@ -87,7 +87,7 @@ public class EmpresaParser {
 
     /**
      * Tabla de centros de trabajo: cada fila tiene nombre en el primer <td>
-     * y el botÃ³n con doDetall('id') en el segundo.
+     * y el botón con doDetall('id') en el segundo.
      */
     private List<CentroResumen> parseCentros(Document doc) {
         List<CentroResumen> result = new ArrayList<>();

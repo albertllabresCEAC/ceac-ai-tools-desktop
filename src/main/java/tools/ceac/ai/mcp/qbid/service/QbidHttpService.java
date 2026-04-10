@@ -21,8 +21,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Ãšnica clase que habla con qBID por HTTP.
- * Todas las demÃ¡s clases pasan por aquÃ­ â€” nunca usan HttpClient directamente.
+ * Única clase que habla con qBID por HTTP.
+ * Todas las demás clases pasan por aquí — nunca usan HttpClient directamente.
  *
  * Stateless: cada llamada recibe el jsessionid del cliente.
  * No guarda estado entre requests.
@@ -44,15 +44,15 @@ public class QbidHttpService {
     @Value("${qbid.http.read-timeout:30000}")
     private int readTimeout;
 
-    // â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Login ──────────────────────────────────────────────────────────────
 
     /**
-     * Realiza el login en dos pasos (GET pÃ¡gina + POST credenciales).
+     * Realiza el login en dos pasos (GET página + POST credenciales).
      * Devuelve el JSESSIONID autenticado.
      */
     public String login(String username, String password) throws Exception {
 
-        // Cada login usa su propio CookieManager â€” aislado
+        // Cada login usa su propio CookieManager — aislado
         CookieManager cookieManager = new CookieManager();
         cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
 
@@ -63,7 +63,7 @@ public class QbidHttpService {
                 .build();
 
         log("LOGIN", baseUrl + "/modules/Login");
-        // Paso 1 â€” GET para obtener JSESSIONID anÃ³nimo
+        // Paso 1 — GET para obtener JSESSIONID anónimo
         HttpRequest getPage = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/modules/Login?initial=yes"))
                 .GET()
@@ -74,7 +74,7 @@ public class QbidHttpService {
 
         client.send(getPage, HttpResponse.BodyHandlers.ofString());
 
-        // Paso 2 â€” POST credenciales
+        // Paso 2 — POST credenciales
         String body = buildFormBody(Map.of(
                 "idTask",      "",
                 "hashTask",    "",
@@ -106,14 +106,14 @@ public class QbidHttpService {
                 .filter(c -> "JSESSIONID".equals(c.getName()))
                 .findFirst()
                 .map(HttpCookie::getValue)
-                .orElseThrow(() -> new SessionExpiredException("No se recibiÃ³ JSESSIONID."));
+                .orElseThrow(() -> new SessionExpiredException("No se recibió JSESSIONID."));
     }
 
-    // â”€â”€ GET autenticado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── GET autenticado ────────────────────────────────────────────────────
 
     /**
      * Hace un GET a qBID usando el jsessionid proporcionado.
-     * Lanza SessionExpiredException si la sesiÃ³n ha expirado.
+     * Lanza SessionExpiredException si la sesión ha expirado.
      */
     public String get(String url, String jsessionid) throws Exception {
         log("GET ", url);
@@ -133,11 +133,11 @@ public class QbidHttpService {
         return response.body();
     }
 
-    // â”€â”€ GET binario autenticado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── GET binario autenticado ────────────────────────────────────────────
 
     /**
      * Hace un GET a qBID y devuelve la respuesta como bytes (para PDFs).
-     * Lanza SessionExpiredException si la sesiÃ³n ha expirado.
+     * Lanza SessionExpiredException si la sesión ha expirado.
      */
     public byte[] getBytes(String url, String jsessionid) throws Exception {
         log("GET ", url);
@@ -159,7 +159,7 @@ public class QbidHttpService {
         return response.body();
     }
 
-    // â”€â”€ POST autenticado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── POST autenticado ───────────────────────────────────────────────────
 
     /**
      * Hace un POST a qBID usando el jsessionid proporcionado.
@@ -185,7 +185,7 @@ public class QbidHttpService {
 
     /**
      * POST con body ya construido como String.
-     * Ãštil para formularios con parÃ¡metros multi-valor (e.g. activitatFormativa[]).
+     * Útil para formularios con parámetros multi-valor (e.g. activitatFormativa[]).
      */
     public String postRaw(String url, String formBody, String jsessionid) throws Exception {
         log("POST", url, formBody);
@@ -202,7 +202,7 @@ public class QbidHttpService {
         return response.body();
     }
 
-    // â”€â”€ Helpers privados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers privados ───────────────────────────────────────────────────
 
     private HttpClient buildAuthenticatedClient(String jsessionid) {
         CookieManager cm = new CookieManager();
@@ -228,7 +228,7 @@ public class QbidHttpService {
         String finalUrl = response.uri().toString();
         String body = response.body();
 
-        // Detectar redirecciÃ³n a login o contenido de login
+        // Detectar redirección a login o contenido de login
         if (finalUrl.contains("Login?initial=yes") || body.contains("doLogin")) {
             throw new SessionExpiredException();
         }

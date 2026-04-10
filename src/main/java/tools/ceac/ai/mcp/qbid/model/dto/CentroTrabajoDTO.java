@@ -5,14 +5,14 @@ public class CentroTrabajoDTO {
     private String codCentro;      // hidden cod_centre_treball_pk
     private String codEmpresa;     // hidden cod_empresa_pk
 
-    // â”€â”€ IdentificaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Identificación ────────────────────────────────────────────────────────
     private String nomenclatura;    // "ME433101-MEM01-00"
     private String estado;          // "VALIDADO"
     private String categoria;       // "MICROEMPRESA"
     private String nombre;          // "SEU CENTRAL"
     private String nombreOpcional;
 
-    // â”€â”€ Datos ubicaciÃ³n (tab #dadesUbicacio) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Datos ubicación (tab #dadesUbicacio) ──────────────────────────────────
     private String ubicacion;
     private String pais;
     private String codigoPostal;
@@ -24,12 +24,12 @@ public class CentroTrabajoDTO {
     private String poligono;
     private String territorio;
 
-    // â”€â”€ Datos de contacto (tab #dadesContacte) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Datos de contacto (tab #dadesContacte) ────────────────────────────────
     private String telefono;
     private String fax;
     private String email;
 
-    // â”€â”€ Datos actividad (tab #dadesActivitat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Datos actividad (tab #dadesActivitat) ─────────────────────────────────
     private String ccae;
 
     private CentroTrabajoDTO() {}

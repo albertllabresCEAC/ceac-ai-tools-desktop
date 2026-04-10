@@ -1,67 +1,112 @@
 # Development Workflow
 
-## Regla simple
+## Simple rule
 
-- uso normal del producto: `run.bat`
-- entorno local completo de desarrollo: `run-full-local.bat`
+- normal product usage: `run.bat`
+- full local development stack: `run-full-local.bat`
 
 ## `run.bat`
 
-Es el punto de entrada del producto.
+This is the product entry point.
 
-Hace:
+It:
 
-- `DARTMAKER_DEV_MODE=false`
-- control plane central por defecto
-- arranque del launcher Swing
+- sets `DARTMAKER_DEV_MODE=false`
+- uses the central control plane by default
+- starts the Swing launcher
 
-No hace:
+It does not:
 
-- levantar el backend local
-- levantar Docker del control plane
-- preparar credenciales de desarrollo
+- start the local backend
+- start Docker for the control plane
+- prepare local development credentials
+
+Use it when you want to test the real product flow against the current central environment.
 
 ## `run-full-local.bat`
 
-Es tooling de desarrollo.
+This is development tooling.
 
-Hace:
+It:
 
-- `DARTMAKER_DEV_MODE=true`
-- `docker compose up -d` en el control plane
-- arranque del backend local
-- apertura del launcher
+- sets `DARTMAKER_DEV_MODE=true`
+- runs `docker compose up -d` in the control plane
+- starts the local control plane
+- opens the launcher
 
-Tambien deja editable la URL del control plane para pruebas.
+It also makes the control-plane URL editable in the UI, which is useful when switching between local and non-production backends.
 
 ## `run-dev.bat`
 
-Es un alias legado.
+Legacy alias kept for compatibility with older habits.
 
-Se mantiene para no romper costumbre, pero el nombre correcto es `run-full-local.bat`.
+The canonical name is `run-full-local.bat`.
 
-## Variables utiles
+## Useful development variables
 
 - `DEV_CONTROL_PLANE_ROOT`
 - `DEV_CONTROL_PLANE_PORT`
 - `DEV_CONTROL_PLANE_KEYCLOAK_PORT`
+- `CONTROL_PLANE_URL`
+- `CLOUDFLARED_CMD`
 
-## Cuándo usar cada modo
+## When to use each mode
 
-### Producto
+### Product mode
 
-Usa `run.bat` cuando quieras:
+Use `run.bat` when you want to:
 
-- entrar al panel de control real
-- arrancar Outlook MCP
-- arrancar QBid MCP
-- probar el producto como usuario
+- sign in to the real control plane
+- start Outlook MCP
+- start Campus MCP
+- start QBid MCP
+- validate the desktop product as an operator
 
-### Desarrollo
+### Development mode
 
-Usa `run-full-local.bat` cuando quieras:
+Use `run-full-local.bat` when you want to:
 
-- depurar contrato backend/launcher
-- levantar el stack local entero
-- tocar el control plane y el launcher a la vez
-- probar cambios antes de subirlos
+- debug launcher and backend together
+- change the bootstrap contract
+- test local Keycloak or local provisioning behavior
+- validate a change before pushing it
+
+## Local identity notes
+
+The local control-plane realm import includes seed users for development.
+
+Those users may be created with required actions such as `UPDATE_PASSWORD`.
+
+If that happens:
+
+- password-grant desktop login will fail
+- you must first complete the password change through local Keycloak
+
+This behavior is expected and comes from Keycloak.
+
+## Cleaning the local environment
+
+If you run into stale local state, check:
+
+- ports `8080`, `8081`, `8082`
+- `logs/`
+- `.env.generated`
+- local Docker volumes for Keycloak and PostgreSQL
+- `jcef-cache/` if Campus behaves as if an old Moodle session were still alive
+
+Typical cleanup actions:
+
+- stop previous launcher instances
+- stop stale `cloudflared` processes
+- recreate local Docker volumes when the Keycloak import changed
+
+## Recommended verification loop
+
+1. start the desired mode
+2. log in
+3. start the target resource
+4. verify local endpoints:
+   - Outlook on `8080`
+   - Campus on `8081`
+   - qBid on `8082`
+5. verify public MCP metadata through the Cloudflare hostname

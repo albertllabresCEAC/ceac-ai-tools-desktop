@@ -15,7 +15,7 @@ public class DetalleInformeDTO {
     private String profesorTutor;
     private String horasTotales;
     private String cursSeleccio;          // valor del hidden input curs_seleccio (necesario para el POST de guardar)
-    private boolean editable;           // false si los selects estÃ¡n disabled (bloqueado)
+    private boolean editable;           // false si los selects están disabled (bloqueado)
     private boolean firmadoTutor;       // false si aparece "(NO FIRMADO)" en el bloque de signatarios
     private List<String> diasNoGestionados;  // "DD/MM/YYYY: descripcion"
     private List<String> ausenciasInforme;   // "DD/MM/YYYY: motivo"
@@ -74,7 +74,7 @@ public class DetalleInformeDTO {
         public DetalleInformeDTO build()                      { return o; }
     }
 
-    // â”€â”€ ActividadValoracion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ActividadValoracion ───────────────────────────────────────────────────
 
     public static class ActividadValoracion {
         private String id;

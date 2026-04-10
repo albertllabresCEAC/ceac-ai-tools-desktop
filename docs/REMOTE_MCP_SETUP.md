@@ -1,28 +1,29 @@
 # Remote MCP Setup
 
-## Objetivo
+## Goal
 
-Este documento explica como el launcher consume el bootstrap remoto y publica un MCP utilizable por clientes externos.
+This document explains how the launcher consumes remote bootstrap and exposes MCP endpoints that can be used by external clients.
 
-## Fuente de verdad
+## Source of truth
 
-El backend es quien decide:
+The control plane decides:
 
-- hostname publico
+- public hostname
 - tunnel token
-- issuer OAuth
+- OAuth issuer
 - JWKS
 - audience
 - scope
 
-El launcher no recalcula esos valores.
+The launcher does not recalculate those values.
 
-## Contrato minimo de bootstrap
+## Minimal bootstrap contract
 
-Cada recurso devuelve:
+Each resource returns:
 
 - `resourceKey`
 - `displayName`
+- `localPort`
 - `tunnelId`
 - `tunnelToken`
 - `mcpHostname`
@@ -32,85 +33,112 @@ Cada recurso devuelve:
 - `requiredAudience`
 - `requiredScope`
 - `resourceName`
-- `localPort`
 - `authExposureMode`
 
-## Recursos actuales
+## Current resources
 
 ### Outlook
 
-- hostname: `https://<slug>-outlook-mcp.dartmaker.com/mcp`
+- public MCP URL: `https://<slug>-outlook-mcp.dartmaker.com/mcp`
 - local port: `8080`
 - audience: `outlookdesktop-mcp`
 - scope: `mcp:tools`
 
+### Campus
+
+- public MCP URL: `https://<slug>-campus-mcp.dartmaker.com/mcp`
+- local port: `8081`
+- audience: `campus-mcp`
+- scope: `campus:tools`
+
 ### qBid
 
-- hostname: `https://<slug>-qbid-mcp.dartmaker.com/mcp`
+- public MCP URL: `https://<slug>-qbid-mcp.dartmaker.com/mcp`
 - local port: `8082`
 - audience: `qbid-mcp`
 - scope: `qbid:tools`
 
-## Arranque real por recurso
+## Actual startup sequence per resource
 
-1. validar que existe sesion
-2. recuperar bootstrap del recurso
-3. arrancar `cloudflared` con su token
-4. arrancar el runtime local del recurso
-5. comprobar `/.well-known/oauth-protected-resource`
-6. usar la URL publica desde ChatGPT o Claude
+1. validate that a desktop session exists
+2. retrieve the bootstrap for the selected resource
+3. start `cloudflared` with the remote token
+4. start the local runtime of the resource
+5. verify `/.well-known/oauth-protected-resource`
+6. use the public URL from ChatGPT, Claude or another MCP client
 
-## Verificaciones utiles
+## Useful verification endpoints
 
 ### Outlook local
 
 - `http://localhost:8080/.well-known/oauth-protected-resource`
 - `http://localhost:8080/mcp`
 
+### Campus local
+
+- `http://localhost:8081/.well-known/oauth-protected-resource`
+- `http://localhost:8081/mcp`
+
 ### qBid local
 
 - `http://localhost:8082/.well-known/oauth-protected-resource`
 - `http://localhost:8082/mcp`
 
-### Publico
+### Public
 
 - `https://<slug>-outlook-mcp.dartmaker.com/.well-known/oauth-protected-resource`
-- `https://<slug>-outlook-mcp.dartmaker.com/mcp`
+- `https://<slug>-campus-mcp.dartmaker.com/.well-known/oauth-protected-resource`
 - `https://<slug>-qbid-mcp.dartmaker.com/.well-known/oauth-protected-resource`
-- `https://<slug>-qbid-mcp.dartmaker.com/mcp`
 
-## Clientes MCP externos
-
-La URL que se registra en ChatGPT o Claude es siempre la del endpoint MCP:
+The URL registered in ChatGPT or Claude must be the MCP endpoint itself:
 
 - `https://<slug>-outlook-mcp.dartmaker.com/mcp`
+- `https://<slug>-campus-mcp.dartmaker.com/mcp`
 - `https://<slug>-qbid-mcp.dartmaker.com/mcp`
 
-No la raiz del dominio.
+Do not register the domain root.
 
-## Problemas tipicos
+## Common problems
 
-### El cliente externo dice que el servidor no soporta OAuth
+### External client says the server does not implement OAuth
 
-Revisar:
+Check:
 
 - `/.well-known/oauth-protected-resource`
-- que `authorization_servers` apunte a `https://auth.dartmaker.com/...`
-- que no haya `localhost` en issuer o JWKS
+- `authorization_servers` points to `https://auth.dartmaker.com/...`
+- no localhost issuer or JWKS leaked into the runtime
 
-### El cliente externo no puede llegar al servidor
+### External client cannot reach the server
 
-Revisar:
+Check:
 
-- tunnel arriba
-- DNS correcto en Cloudflare
-- handshake TLS correcto
-- `cloudflared` local vivo
+- tunnel is alive
+- DNS is correct in Cloudflare
+- TLS handshake succeeds
+- local `cloudflared` is still running
 
-### El login OAuth falla
+### OAuth login fails with invalid scope
 
-Revisar:
+Check:
 
-- audience y scope del recurso
-- dynamic client registration en Keycloak
-- whitelist de hosts de ChatGPT y Claude
+- resource audience and scope
+- Keycloak Dynamic Client Registration
+- trusted-host configuration for ChatGPT and Claude
+
+### Public tunnel points to the wrong local port
+
+Check:
+
+- the resource was reprovisioned after changing its origin port
+- the stored ingress configuration in Cloudflare matches the runtime port
+
+### Swagger works but external MCP login fails
+
+Swagger only proves the local runtime is alive.
+
+External MCP login additionally depends on:
+
+- correct public hostname
+- tunnel pointing to the right local origin
+- correct OAuth metadata
+- correct issuer, audience and scope

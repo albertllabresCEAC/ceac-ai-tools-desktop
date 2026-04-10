@@ -20,7 +20,7 @@ public class DetalleConvenioParser {
     public DetalleConvenioDTO parseDetalle(String html) {
         Document doc = Jsoup.parse(html);
 
-        // codAlumno y nombreAlumno â€” del href/title del enlace del alumno
+        // codAlumno y nombreAlumno — del href/title del enlace del alumno
         String codAlumno    = "";
         String nombreAlumno = "";
         Element alumnoLink  = doc.selectFirst("a[href*='aid=']");
@@ -32,7 +32,7 @@ public class DetalleConvenioParser {
 
         // codEmpresa y nombre limpio
         // Estructura real: <input name="codiEmpresa" value="366143"> en el mismo div
-        // El nombre limpio estÃ¡ en title="KARVE INFORMATICA, S.L." del <a>
+        // El nombre limpio está en title="KARVE INFORMATICA, S.L." del <a>
         String codEmpresa = "";
         String empresa    = "";
         for (Element label : doc.select("label.control-label")) {
@@ -51,7 +51,7 @@ public class DetalleConvenioParser {
             }
         }
 
-        // Campos estÃ¡ndar por label
+        // Campos estándar por label
         String fechas      = extractByLabel(doc, "Periodo del acuerdo:");
         String horasTot    = extractByLabel(doc, "Horas de la estancia en la empresa:");
         String horasPend   = extractByLabel(doc, "Horas pendientes:");
@@ -60,15 +60,15 @@ public class DetalleConvenioParser {
         String curso       = extractByLabel(doc, "Curso:");
         String tipoAcuerdo = extractByLabel(doc, "Tipo acuerdo:");
 
-        // Tutor empresa â€” label dinÃ¡mico con id labelTutorsEmpresa{id}
+        // Tutor empresa — label dinámico con id labelTutorsEmpresa{id}
         String tutorEmpresa = "";
         Element tutorLabel  = doc.selectFirst("label[id^='labelTutorsEmpresa']");
         if (tutorLabel != null) {
-            // El label contiene el nombre + un enlace de borrar â€” quedarse solo con el texto directo
+            // El label contiene el nombre + un enlace de borrar — quedarse solo con el texto directo
             tutorEmpresa = tutorLabel.ownText().trim();
         }
 
-        // Profesor/Tutor â€” option selected del select#professor
+        // Profesor/Tutor — option selected del select#professor
         String profesorTutor = "";
         Element profSelect   = doc.getElementById("professor");
         if (profSelect != null) {
@@ -76,7 +76,7 @@ public class DetalleConvenioParser {
             if (selected != null) profesorTutor = selected.text().trim();
         }
 
-        // hash_code REF05 â€” del onclick del botÃ³n REF05 (CONVEN)
+        // hash_code REF05 — del onclick del botón REF05 (CONVEN)
         String hashRef05 = "";
         Element ref05btn = doc.selectFirst("button[onclick*='tipus_document=CONVEN']");
         if (ref05btn != null) {
@@ -84,7 +84,7 @@ public class DetalleConvenioParser {
             if (m.find()) hashRef05 = m.group(1);
         }
 
-        // hash_code REF05_Baja â€” del onclick del botÃ³n REF05 finalizaciÃ³n anticipada (CONVENBAIXA)
+        // hash_code REF05_Baja — del onclick del botón REF05 finalización anticipada (CONVENBAIXA)
         String hashRef05Baja = "";
         Element ref05BajaBtn = doc.selectFirst("button[onclick*='tipus_document=CONVENBAIXA']");
         if (ref05BajaBtn != null) {
@@ -92,12 +92,12 @@ public class DetalleConvenioParser {
             if (m.find()) hashRef05Baja = m.group(1);
         }
 
-        // curs_seleccio â€” campo oculto del formulario
+        // curs_seleccio — campo oculto del formulario
         String cursSeleccio = "";
         Element cursInput = doc.selectFirst("input[name='curs_seleccio']");
         if (cursInput != null) cursSeleccio = cursInput.attr("value");
 
-        // estudiId â€” del onclick del botÃ³n REF06
+        // estudiId — del onclick del botón REF06
         String estudiId = "";
         Element ref06btn = doc.selectFirst("button[onclick*='moduleaction=documentPDF']");
         if (ref06btn != null) {
@@ -138,7 +138,7 @@ public class DetalleConvenioParser {
                 .build();
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
      * Busca un label.control-label con ese texto exacto y devuelve
@@ -154,7 +154,7 @@ public class DetalleConvenioParser {
         return "";
     }
 
-    /** Quita todo excepto dÃ­gitos: "515&nbsp;h" â†’ "515" */
+    /** Quita todo excepto dígitos: "515&nbsp;h" → "515" */
     private String limpiarHoras(String raw) {
         if (raw == null || raw.isBlank()) return "0";
         return raw.replaceAll("[^0-9]", "");

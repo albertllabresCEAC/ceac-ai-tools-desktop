@@ -72,7 +72,7 @@ public class FichaAlumnoDTO {
         public FichaAlumnoDTO build()                 { return o; }
     }
 
-    // â”€â”€ Cuaderno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Cuaderno ──────────────────────────────────────────────────────────────
 
     public static class Cuaderno {
         private String estudio;       // texto completo del label strong

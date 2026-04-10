@@ -20,33 +20,33 @@ public class CentroTrabajoParser {
         return CentroTrabajoDTO.builder()
                 .codCentro(formValue(doc, "cod_centre_treball_pk"))
                 .codEmpresa(formValue(doc, "cod_empresa_pk"))
-                // IdentificaciÃ³n
+                // Identificación
                 .nomenclatura(byLabel(ctPanel,  "Nomenclatura:"))
                 .estado(byLabel(ctPanel,        "Estado:"))
-                .categoria(byLabel(ctPanel,     "CategorÃ­a:"))
+                .categoria(byLabel(ctPanel,     "Categoría:"))
                 .nombre(byLabel(ctPanel,        "Nombre:"))
                 .nombreOpcional(byLabel(ctPanel,"Nombre opcional:"))
-                // UbicaciÃ³n
-                .ubicacion(byLabel(ubicTab,          "UbicaciÃ³n:"))
-                .pais(byLabel(ubicTab,               "PaÃ­s:"))
-                .codigoPostal(byLabel(ubicTab,       "CÃ³digo Postal:"))
+                // Ubicación
+                .ubicacion(byLabel(ubicTab,          "Ubicación:"))
+                .pais(byLabel(ubicTab,               "País:"))
+                .codigoPostal(byLabel(ubicTab,       "Código Postal:"))
                 .municipio(byLabel(ubicTab,          "Municipio/Localidad:"))
-                .via(byLabel(ubicTab,                "VÃ­a:"))
-                .numero(byLabel(ubicTab,             "NÃºmero:"))
+                .via(byLabel(ubicTab,                "Vía:"))
+                .numero(byLabel(ubicTab,             "Número:"))
                 .escaleraPisoPuerta(byLabel(ubicTab, "Escalera/Piso/Puerta:"))
-                .restoDireccion(byLabel(ubicTab,     "Resto direcciÃ³n:"))
-                .poligono(byLabel(ubicTab,           "PolÃ­gono:"))
+                .restoDireccion(byLabel(ubicTab,     "Resto dirección:"))
+                .poligono(byLabel(ubicTab,           "Polígono:"))
                 .territorio(byLabel(ubicTab,         "Territorio:"))
                 // Contacto
-                .telefono(byLabel(contTab, "TelÃ©fono:"))
+                .telefono(byLabel(contTab, "Teléfono:"))
                 .fax(byLabel(contTab,      "Fax:"))
-                .email(byLabel(contTab,    "Correo electrÃ³nico:"))
+                .email(byLabel(contTab,    "Correo electrónico:"))
                 // Actividad
                 .ccae(byLabel(activTab, "CCAE:"))
                 .build();
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String formValue(Document doc, String name) {
         Element el = doc.selectFirst("input[name=" + name + "]");
@@ -56,7 +56,7 @@ public class CentroTrabajoParser {
     /**
      * Busca label.control-label con ese texto dentro del scope dado,
      * y devuelve el texto del siguiente elemento hermano.
-     * Acepta scope null (bÃºsqueda global en el doc) para uso defensivo.
+     * Acepta scope null (búsqueda global en el doc) para uso defensivo.
      */
     private String byLabel(Element scope, String labelText) {
         if (scope == null) return "";
@@ -64,7 +64,7 @@ public class CentroTrabajoParser {
             if (label.text().trim().equals(labelText)) {
                 Element sibling = label.nextElementSibling();
                 if (sibling != null) {
-                    // Los valores vacÃ­os a veces vienen como "-"
+                    // Los valores vacíos a veces vienen como "-"
                     String text = sibling.text().trim();
                     return "-".equals(text) ? "" : text;
                 }

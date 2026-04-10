@@ -6,10 +6,10 @@ import java.util.Base64;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * CachÃ© en memoria de sesiones qBID por usuario.
- * Evita hacer login en qBID en cada request â€” reutiliza el jsessionid
- * mientras no hayan pasado 14 minutos desde la Ãºltima interacciÃ³n
- * (qBID expira la sesiÃ³n por inactividad a los 15 minutos).
+ * Caché en memoria de sesiones qBID por usuario.
+ * Evita hacer login en qBID en cada request — reutiliza el jsessionid
+ * mientras no hayan pasado 14 minutos desde la última interacción
+ * (qBID expira la sesión por inactividad a los 15 minutos).
  */
 @Component
 public class SesionCache {
@@ -23,7 +23,7 @@ public class SesionCache {
 
     /**
      * Dado el header Authorization: Basic <base64>,
-     * devuelve un jsessionid vÃ¡lido â€” del cachÃ© o haciendo login.
+     * devuelve un jsessionid válido — del caché o haciendo login.
      */
     public String resolveSession(String authorizationHeader) throws Exception {
         String[] credentials = decodeBasicAuth(authorizationHeader);
@@ -36,14 +36,14 @@ public class SesionCache {
             return cached.jsessionid();
         }
 
-        // Login en qBID y guardar en cachÃ©
+        // Login en qBID y guardar en caché
         String jsessionid = http.login(username, password);
         cache.put(username, new CachedSession(jsessionid, System.currentTimeMillis()));
         return jsessionid;
     }
 
     /**
-     * Fuerza renovaciÃ³n de sesiÃ³n para un usuario.
+     * Fuerza renovación de sesión para un usuario.
      * Se llama cuando qBID devuelve SessionExpiredException.
      */
     public String renewSession(String authorizationHeader) throws Exception {
@@ -53,7 +53,7 @@ public class SesionCache {
     }
 
     /**
-     * Elimina la sesiÃ³n del cachÃ© (logout).
+     * Elimina la sesión del caché (logout).
      */
     public void invalidate(String authorizationHeader) {
         try {
@@ -62,27 +62,27 @@ public class SesionCache {
         } catch (Exception ignored) {}
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String[] decodeBasicAuth(String header) {
         if (header == null || !header.startsWith("Basic ")) {
-            throw new IllegalArgumentException("Header Authorization invÃ¡lido. Usa Basic Auth.");
+            throw new IllegalArgumentException("Header Authorization inválido. Usa Basic Auth.");
         }
         String base64  = header.substring("Basic ".length()).trim();
         String decoded = new String(Base64.getDecoder().decode(base64));
         String[] parts = decoded.split(":", 2);
         if (parts.length != 2) {
-            throw new IllegalArgumentException("Formato de credenciales invÃ¡lido.");
+            throw new IllegalArgumentException("Formato de credenciales inválido.");
         }
         return parts;
     }
 
-    // â”€â”€ Record interno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Record interno ────────────────────────────────────────────────────────
 
     private record CachedSession(String jsessionid, long lastUsed) {
         /**
-         * La sesiÃ³n expira si han pasado mÃ¡s de 14 minutos desde la Ãºltima
-         * interacciÃ³n (qBID expira por inactividad a los 15 minutos).
+         * La sesión expira si han pasado más de 14 minutos desde la última
+         * interacción (qBID expira por inactividad a los 15 minutos).
          */
         boolean isExpired() {
             return System.currentTimeMillis() - lastUsed > (14 * 60_000);

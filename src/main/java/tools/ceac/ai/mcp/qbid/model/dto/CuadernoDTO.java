@@ -15,8 +15,8 @@ public class CuadernoDTO {
     private String horasCurriculares;
     private String exencion;
     private String hashCode;
-    private String urlRef19;               // ValoraciÃ³n global (documentValoracio)
-    private String urlRef20;               // CalificaciÃ³n final FCT (document)
+    private String urlRef19;               // Valoración global (documentValoracio)
+    private String urlRef20;               // Calificación final FCT (document)
     private String urlRef22;               // Expediente (documentExpedient)
     private List<AcuerdoCuadernoDTO> acuerdos;
 

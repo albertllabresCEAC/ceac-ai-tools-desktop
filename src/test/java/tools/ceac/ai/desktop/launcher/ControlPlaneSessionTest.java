@@ -34,8 +34,8 @@ class ControlPlaneSessionTest {
                 "user-1",
                 "machine-1",
                 "1.0.0",
-                "local-desktop",
-                "local-desktop@example.com",
+                "albert",
+                "albert.llabres@ceacfp.es",
                 legacyBootstrap,
                 null
         );
@@ -71,8 +71,8 @@ class ControlPlaneSessionTest {
                 "user-1",
                 "machine-1",
                 "1.0.0",
-                "local-desktop",
-                "local-desktop@example.com",
+                "albert",
+                "albert.llabres@ceacfp.es",
                 null,
                 List.of(new ClientMcpResourceResponse("qbid", "QBid MCP", qbidBootstrap))
         );

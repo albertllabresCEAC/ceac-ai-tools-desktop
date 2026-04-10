@@ -33,10 +33,10 @@ public class SeguimientoParser {
                 .build();
     }
 
-    // â”€â”€ Cabecera â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Cabecera ─────────────────────────────────────────────────────────────
 
     private Cabecera parseCabecera(Document doc) {
-        // codAlumno y nombreAlumno â€” del enlace aid=
+        // codAlumno y nombreAlumno — del enlace aid=
         String codAlumno    = "";
         String nombreAlumno = "";
         Element alumnoLink  = doc.selectFirst("a[href*='aid=']");
@@ -46,7 +46,7 @@ public class SeguimientoParser {
             nombreAlumno = alumnoLink.attr("title").trim();
         }
 
-        // Modalidades â€” spans label-info de la primera fila
+        // Modalidades — spans label-info de la primera fila
         List<Element> spans = doc.select(".label.label-info");
         String modalidadEnsenanza = spans.size() > 0 ? spans.get(0).text().trim() : "";
         String movilidad          = spans.size() > 1 ? spans.get(1).text().trim() : "";
@@ -65,10 +65,10 @@ public class SeguimientoParser {
                 .build();
     }
 
-    // â”€â”€ SeguimientoAlumno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── SeguimientoAlumno ─────────────────────────────────────────────────────
 
     private SeguimientoAlumno parseSeguimientoAlumno(Document doc) {
-        // Periodo â€” "de 16/03/2026 a 01/07/2026"
+        // Periodo — "de 16/03/2026 a 01/07/2026"
         String periodoInicio = "";
         String periodoFin    = "";
         String periodoRaw    = extractByLabel(doc, "Periodo del acuerdo:");
@@ -83,14 +83,14 @@ public class SeguimientoParser {
                 .periodoFin(periodoFin)
                 .contactoInicial(extractByLabel(doc, "Contacto inicial:"))
                 .contactoSeguimiento(extractByLabel(doc, "Contacto seguimiento:"))
-                .contactoValoracion(extractByLabel(doc, "Contacto valoraciÃ³n:"))
+                .contactoValoracion(extractByLabel(doc, "Contacto valoración:"))
                 .build();
     }
 
-    // â”€â”€ Valoracion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Valoracion ────────────────────────────────────────────────────────────
 
     private Valoracion parseValoracion(Document doc) {
-        // cod_visita de REF18 â€” del onclick del botÃ³n QUALI_EXPEDIENT
+        // cod_visita de REF18 — del onclick del botón QUALI_EXPEDIENT
         String codVisitaRef18 = "";
         Element ref18btn = doc.selectFirst("button[onclick*='docType=QUALI_EXPEDIENT']");
         if (ref18btn != null) {
@@ -98,7 +98,7 @@ public class SeguimientoParser {
             if (m.find()) codVisitaRef18 = m.group(1);
         }
 
-        // cod_visita_valoracion â€” del onclick editValoracioAvaluacio(codVisitaValoracion, codVisita)
+        // cod_visita_valoracion — del onclick editValoracioAvaluacio(codVisitaValoracion, codVisita)
         String codVisitaValoracion = "";
         for (Element el : doc.select("[onclick*='editValoracioAvaluacio']")) {
             Matcher m = P_EDITAR_VALORACIO.matcher(el.attr("onclick"));
@@ -109,30 +109,30 @@ public class SeguimientoParser {
         }
 
         return Valoracion.builder()
-                .valoracionDossier(extractByLabel(doc, "ValoraciÃ³n dossier:"))
+                .valoracionDossier(extractByLabel(doc, "Valoración dossier:"))
                 .cuestionarioCentroTrabajo(extractByLabel(doc, "REF10. Cuestionario al Centro de Trabajo:"))
                 .codVisitaRef18(codVisitaRef18)
                 .codVisitaValoracion(codVisitaValoracion)
                 .build();
     }
 
-    // â”€â”€ Homologacion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Homologacion ──────────────────────────────────────────────────────────
 
     private Homologacion parseHomologacion(Document doc) {
-        // Los tres campos estÃ¡n dentro del panel "HomologaciÃ³n"
-        Element panel = findPanelByTitle(doc, "HomologaciÃ³n");
+        // Los tres campos están dentro del panel "Homologación"
+        Element panel = findPanelByTitle(doc, "Homologación");
         if (panel == null) {
             return Homologacion.builder().build();
         }
 
         return Homologacion.builder()
                 .profesorTutor(extractByLabelInScope(panel, "Profesor/Tutor/a:"))
-                .coordPracticas(extractByLabelInScope(panel, "Coord. PrÃ¡cticas:"))
+                .coordPracticas(extractByLabelInScope(panel, "Coord. Prácticas:"))
                 .coordTerritorial(extractByLabelInScope(panel, "Coord. Territorial:"))
                 .build();
     }
 
-    // â”€â”€ Documentos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Documentos ────────────────────────────────────────────────────────────
 
     private List<Documento> parseDocumentos(Document doc) {
         List<Documento> result = new ArrayList<>();
@@ -142,12 +142,12 @@ public class SeguimientoParser {
         for (Element btn : doc.select("button[onclick*='moduleaction=document']")) {
             String onclick = btn.attr("onclick");
 
-            // Extraer el texto del botÃ³n como ref (REF06, REF07...)
+            // Extraer el texto del botón como ref (REF06, REF07...)
             String ref = btn.text().trim();
             if (ref.isBlank()) continue;
 
-            // Construir URL en castellano buscando el onclick de la opciÃ³n "Castellano"
-            // o usando la URL directa del botÃ³n principal
+            // Construir URL en castellano buscando el onclick de la opción "Castellano"
+            // o usando la URL directa del botón principal
             String url = extractDocUrl(onclick, base);
             if (url.isBlank()) continue;
 
@@ -160,7 +160,7 @@ public class SeguimientoParser {
         return result;
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private String extractByLabel(Document doc, String labelText) {
         for (Element label : doc.select("label.control-label")) {
@@ -206,7 +206,7 @@ public class SeguimientoParser {
         return null;
     }
 
-    /** Extrae la URL del PDF en castellano del onclick del botÃ³n */
+    /** Extrae la URL del PDF en castellano del onclick del botón */
     private String extractDocUrl(String onclick, String base) {
         // El onclick tiene: window.open('/sBid/modules/Fct?...language=SP', 'PDF')
         Pattern p = Pattern.compile("window\\.open\\('(/sBid/[^']+language=SP)'");

@@ -22,7 +22,7 @@ public class ActividadParser {
     private static final Pattern P_AID    = Pattern.compile("aid=(\\d+)");
     private static final Pattern P_PERIOD = Pattern.compile("de\\s*(\\d{2}/\\d{2}/\\d{4})\\s*a\\s*(\\d{2}/\\d{2}/\\d{4})");
 
-    // â”€â”€ Paso 1: parsear respuesta AJAX del hash â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Paso 1: parsear respuesta AJAX del hash ───────────────────────────────
 
     public String[] parseHashResponse(String rawText) {
         if (rawText == null || rawText.isBlank()) return null;
@@ -40,12 +40,12 @@ public class ActividadParser {
         return new String[]{ hash, pk };
     }
 
-    // â”€â”€ Paso 2: parsear HTML de la actividad diaria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Paso 2: parsear HTML de la actividad diaria ───────────────────────────
 
     public ActividadDTO parseActividad(String html, String fecha) {
         Document doc = Jsoup.parse(html);
 
-        // â”€â”€ Cabecera alumno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Cabecera alumno ───────────────────────────────────────────────────
         String codAlumno    = "";
         String nombreAlumno = "";
         Element alumnoLink  = doc.selectFirst("a[href*='aid=']");
@@ -60,7 +60,7 @@ public class ActividadParser {
         String profesorTutor = extractLinkTitle(doc, "Profesor/Tutor/a:");
         String estudio       = extractLinkTitle(doc, "Estudio:");
 
-        String modalidadEnsenanza  = extractLabelSpan(doc, "Modalidad enseÃ±anza:");
+        String modalidadEnsenanza  = extractLabelSpan(doc, "Modalidad enseñanza:");
         String movilidad           = extractLabelSpan(doc, "Mobilidad:");
         String modalidadPresencial = extractLabelSpan(doc, "Modalidad presencial:");
 
@@ -72,7 +72,7 @@ public class ActividadParser {
             if (m.find()) { periodoInicio = m.group(1); periodoFin = m.group(2); }
         }
 
-        // â”€â”€ Fecha en texto â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Fecha en texto ────────────────────────────────────────────────────
         String fechaTexto = "";
         for (Element label : doc.select("div.panel-heading label.control-label")) {
             String txt = label.ownText().trim();
@@ -82,10 +82,10 @@ public class ActividadParser {
             }
         }
 
-        // â”€â”€ Horas mÃ¡ximas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        String horasMaximas = extractLabelSpan(doc, "Horas mÃ¡ximas:");
+        // ── Horas máximas ─────────────────────────────────────────────────────
+        String horasMaximas = extractLabelSpan(doc, "Horas máximas:");
 
-        // â”€â”€ URLs anterior / siguiente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── URLs anterior / siguiente ─────────────────────────────────────────
         String urlAnterior  = "";
         String urlSiguiente = "";
         Element back = doc.selectFirst("a:has(img[src*='backAlumne'])");
@@ -93,7 +93,7 @@ public class ActividadParser {
         if (back != null) urlAnterior  = BASE_URL + back.attr("href");
         if (next != null) urlSiguiente = BASE_URL + next.attr("href");
 
-        // â”€â”€ Actividades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Actividades ───────────────────────────────────────────────────────
         List<Actividad> actividades = new ArrayList<>();
         for (Element div : doc.select("div[id^='activitat']")) {
             Element select = div.selectFirst("select[id^='inp_']");
@@ -114,7 +114,7 @@ public class ActividadParser {
                     .build());
         }
 
-        // â”€â”€ Horas introducidas â€” suma de selects â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Horas introducidas — suma de selects ──────────────────────────────
         double totalHoras = actividades.stream()
                 .mapToDouble(a -> {
                     try { return Double.parseDouble(a.getHorasIntroducidas()); }
@@ -123,7 +123,7 @@ public class ActividadParser {
                 .sum();
         String horasIntroducidas = formatHoras(totalHoras);
 
-        // â”€â”€ Ausencia parcial â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Ausencia parcial ──────────────────────────────────────────────────
         String ausenciaParcial = "";
         Element selectAus = doc.getElementById("motiuAbsenciaParcial");
         if (selectAus != null) {
@@ -131,11 +131,11 @@ public class ActividadParser {
             if (selOpt != null) ausenciaParcial = selOpt.text().trim();
         }
 
-        // â”€â”€ Observaciones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Observaciones ─────────────────────────────────────────────────────
         Element textarea = doc.selectFirst("textarea[name='observacionsInutilsAlumneMaiOmplira']");
         String observaciones = textarea != null ? textarea.text().trim() : "";
 
-        // â”€â”€ Relleno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Relleno ───────────────────────────────────────────────────────────
         boolean relleno = totalHoras > 0 || !ausenciaParcial.isBlank();
 
         return ActividadDTO.builder()
@@ -163,7 +163,7 @@ public class ActividadParser {
                 .build();
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String formatHoras(double hm) {
         if (hm == 0) return "0H";

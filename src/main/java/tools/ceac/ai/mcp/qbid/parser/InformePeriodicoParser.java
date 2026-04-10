@@ -22,13 +22,13 @@ public class InformePeriodicoParser {
     public DetalleInformeDTO parse(String html) {
         Document doc = Jsoup.parse(html);
 
-        // â”€â”€ IDs del formulario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── IDs del formulario ────────────────────────────────────────────────
         String conveniValoracioPk = inputVal(doc, "conveni_valoracio_pk");
         String codConvenio        = inputVal(doc, "codi_conveni");
         String codTemporal        = inputVal(doc, "codi_conveni_provisional");
         String cursSeleccio       = inputVal(doc, "curs_seleccio");
 
-        // â”€â”€ Alumno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Alumno ────────────────────────────────────────────────────────────
         String codAlumno = "";
         String alumno    = "";
         Element alumnoLink = doc.selectFirst("a[href*='aid=']");
@@ -38,11 +38,11 @@ public class InformePeriodicoParser {
             alumno = alumnoLink.attr("title").trim();
         }
 
-        // â”€â”€ Empresa y tutor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Empresa y tutor ───────────────────────────────────────────────────
         String empresa       = extractLinkTitle(doc, "Empresa:");
         String profesorTutor = extractLinkTitle(doc, "Profesor/Tutor/a:");
 
-        // â”€â”€ Periodo del acuerdo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Periodo del acuerdo ───────────────────────────────────────────────
         String periodoAcuerdo = "";
         for (Element label : doc.select("label.control-label")) {
             if (label.text().trim().equals("Periodo del acuerdo:")) {
@@ -55,7 +55,7 @@ public class InformePeriodicoParser {
             }
         }
 
-        // â”€â”€ Periodo del informe (en el panel-heading de "Resumen de horas") â”€â”€â”€
+        // ── Periodo del informe (en el panel-heading de "Resumen de horas") ───
         String periodoInforme = "";
         for (Element heading : doc.select("div.panel-heading")) {
             if (heading.text().contains("Resumen")) {
@@ -65,7 +65,7 @@ public class InformePeriodicoParser {
             }
         }
 
-        // â”€â”€ Horas totales â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Horas totales ─────────────────────────────────────────────────────
         String horasTotales = "";
         Element alertInfo = doc.selectFirst("div.alert.alert-info strong");
         if (alertInfo != null) {
@@ -73,27 +73,27 @@ public class InformePeriodicoParser {
             if (m.find()) horasTotales = m.group(1);
         }
 
-        // â”€â”€ Editable: false si los selects estÃ¡n disabled (informe bloqueado) â”€
+        // ── Editable: false si los selects están disabled (informe bloqueado) ─
         boolean editable = doc.selectFirst("select[disabled]") == null;
 
-        // â”€â”€ Firmado por el tutor: true si NO aparece "(NO FIRMADO)" â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Firmado por el tutor: true si NO aparece "(NO FIRMADO)" ───────────
         boolean firmadoTutor = !doc.text().contains("NO FIRMADO");
 
-        // â”€â”€ DÃ­as no gestionados â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Días no gestionados ───────────────────────────────────────────────
         List<String> diasNoGestionados = parseListaAlert(doc, "alert-danger");
 
-        // â”€â”€ Ausencias del informe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Ausencias del informe ─────────────────────────────────────────────
         List<String> ausenciasInforme = parseListaAlert(doc, "alert-warning");
 
-        // â”€â”€ Actividades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Actividades ───────────────────────────────────────────────────────
         List<ActividadValoracion> actividades = parseActividades(doc);
 
-        // â”€â”€ Observaciones â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Observaciones ─────────────────────────────────────────────────────
         String obsAlumno  = textareaVal(doc, "obs_alumne");
         String obsEmpresa = textareaVal(doc, "obs_empresa");
         String obsTutor   = textareaVal(doc, "obs_tutor");
 
-        // â”€â”€ Signatario empresa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Signatario empresa ────────────────────────────────────────────────
         String signatario = "";
         Element sigInput = doc.selectFirst("input[name='signatari']");
         if (sigInput != null) signatario = sigInput.val().trim();
@@ -122,13 +122,13 @@ public class InformePeriodicoParser {
                 .build();
     }
 
-    // â”€â”€ Actividades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Actividades ───────────────────────────────────────────────────────────
 
     private List<ActividadValoracion> parseActividades(Document doc) {
         List<ActividadValoracion> result = new ArrayList<>();
 
         for (Element row : doc.select("div.row[id^='activitat']")) {
-            // Solo filas con valoraciÃ³n (tienen select inp_XXXXX) â€” omite cabeceras de grupo
+            // Solo filas con valoración (tienen select inp_XXXXX) — omite cabeceras de grupo
             Element selectTutor = row.selectFirst("select[name^='inp_']:not([name^='inp_extra_'])");
             if (selectTutor == null) continue;
 
@@ -156,7 +156,7 @@ public class InformePeriodicoParser {
         return result;
     }
 
-    // â”€â”€ Listas de alertas (dÃ­as no gestionados / ausencias) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Listas de alertas (días no gestionados / ausencias) ──────────────────
 
     private List<String> parseListaAlert(Document doc, String alertClass) {
         List<String> result = new ArrayList<>();
@@ -169,7 +169,7 @@ public class InformePeriodicoParser {
         return result;
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     private String selectedOptionText(Element select) {
         if (select == null) return "";

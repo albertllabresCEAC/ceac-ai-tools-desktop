@@ -21,14 +21,14 @@ public class PlanActividadesParser {
         Document doc = Jsoup.parse(html);
         List<PlanActividadesDTO> result = new ArrayList<>();
 
-        // â”€â”€ Campos a nivel de convenio (fuera de las tabs, comunes a todos los planes) â”€â”€
+        // ── Campos a nivel de convenio (fuera de las tabs, comunes a todos los planes) ──
 
-        // Modalidad enseÃ±anza, movilidad y presencial â€” span.label-info en cada fila
-        String modalidadEnsenanza  = extractLabelInfo(doc, "Modalidad enseÃ±anza:");
+        // Modalidad enseñanza, movilidad y presencial — span.label-info en cada fila
+        String modalidadEnsenanza  = extractLabelInfo(doc, "Modalidad enseñanza:");
         String movilidad           = extractLabelInfo(doc, "Mobilidad:");
         String modalidadPresencial = extractLabelInfo(doc, "Modalidad presencial:");
 
-        // Centro, tutor, alumno, estudio, empresa, centro de trabajo â€” link dentro del siguiente div
+        // Centro, tutor, alumno, estudio, empresa, centro de trabajo — link dentro del siguiente div
         String centro         = extractLinkLabel(doc, "Centro:");
         String tutorDocente   = extractLinkLabel(doc, "Profesor/Tutor/a:");
         String alumno         = extractLinkLabel(doc, "Alumno/a:");
@@ -36,27 +36,27 @@ public class PlanActividadesParser {
         String empresa        = extractLinkLabel(doc, "Empresa:");
         String centroDeTrabajo = extractLinkLabel(doc, "Centro de Trabajo:");
 
-        // â”€â”€ ajutConveni â€” campo oculto global del formulario â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── ajutConveni — campo oculto global del formulario ─────────────────────────
         String ajutConveni = "";
         Element ajutInput = doc.selectFirst("input[name='ajutConveni']");
         if (ajutInput != null) ajutConveni = ajutInput.val();
 
-        // â”€â”€ Un plan por cada tab #pap_{pk} â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Un plan por cada tab #pap_{pk} ────────────────────────────────────────────
 
         for (Element tabPanel : doc.select("div[id^='pap_']")) {
             String pk = tabPanel.id().replaceFirst("pap_", "");
 
-            // Periodo â€” del anchor del tab correspondiente
+            // Periodo — del anchor del tab correspondiente
             String periodo = "";
             Element tabLink = doc.selectFirst("a[href='#pap_" + pk + "']");
             if (tabLink != null) periodo = tabLink.text().trim();
 
-            // Tutor empresa â€” input responsable_empresa_{pk}
+            // Tutor empresa — input responsable_empresa_{pk}
             String tutorEmpresa = "";
             Element tutorInput = tabPanel.selectFirst("input[name^='responsable_empresa_']");
             if (tutorInput != null) tutorEmpresa = tutorInput.val().trim();
 
-            // Tutor/a responsable â€” opciÃ³n seleccionada del select responsable_centre_{pk}
+            // Tutor/a responsable — opción seleccionada del select responsable_centre_{pk}
             // El texto tiene el prefijo "Professorat: " que se elimina
             String tutorResponsable = "";
             String responsableCentreValue = "";
@@ -70,7 +70,7 @@ public class PlanActividadesParser {
                 }
             }
 
-            // Nombre del input autocomplete cod_pla_origen{helperId} â€” necesario para el POST
+            // Nombre del input autocomplete cod_pla_origen{helperId} — necesario para el POST
             String codPlaOrigenParamName = "cod_pla_origen";
             for (Element inp : tabPanel.select("input[name^='cod_pla_origen']")) {
                 String n = inp.attr("name");
@@ -80,18 +80,18 @@ public class PlanActividadesParser {
                 }
             }
 
-            // Instalaciones y equipamientos â€” textarea recursosActivitat
+            // Instalaciones y equipamientos — textarea recursosActivitat
             String instalaciones = "";
             Element textarea = tabPanel.selectFirst("textarea[name='recursosActivitat']");
             if (textarea != null) instalaciones = textarea.text().trim();
 
-            // â”€â”€ Actividades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── Actividades ───────────────────────────────────────────────────────────
 
             List<ItemPlanDTO> actividades = new ArrayList<>();
             for (Element actDiv : tabPanel.select("div.activitatClass")) {
                 String rawId = actDiv.id().replaceFirst("activitat", "");
 
-                // Nivel jerÃ¡rquico desde padding-left (0px=raÃ­z, 100px=nivel1, 200px=nivel2...)
+                // Nivel jerárquico desde padding-left (0px=raíz, 100px=nivel1, 200px=nivel2...)
                 int nivel = 0;
                 Matcher m = P_PADDING.matcher(actDiv.attr("style"));
                 if (m.find()) nivel = Integer.parseInt(m.group(1)) / 100;
@@ -145,7 +145,7 @@ public class PlanActividadesParser {
         return result;
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
      * Busca un label.control-label con ese texto y devuelve el texto del

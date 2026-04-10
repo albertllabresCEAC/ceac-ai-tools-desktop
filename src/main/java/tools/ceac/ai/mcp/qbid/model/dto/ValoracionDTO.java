@@ -4,15 +4,15 @@ import java.util.List;
 
 public class ValoracionDTO {
 
-    private String qualificacio;       // "Positiva", "Negativa"â€¦
-    private String subQualificacio;    // "Bien", "Notable"â€¦
-    private String fecha;              // dataQualy â€” "25/02/2026"
+    private String qualificacio;       // "Positiva", "Negativa"…
+    private String subQualificacio;    // "Bien", "Notable"…
+    private String fecha;              // dataQualy — "25/02/2026"
     private String observaciones;
     private String fechaContacto;      // data_realitzada
-    private String tipoContacto;       // "Correo", "TelÃ©fono"â€¦
+    private String tipoContacto;       // "Correo", "Teléfono"…
     private String signatarioEmpresa;
     private String signatarioCentro;
-    private List<Criterio> criterios;  // quest_0 â€¦ quest_20
+    private List<Criterio> criterios;  // quest_0 … quest_20
 
     private ValoracionDTO() {}
 
@@ -42,11 +42,11 @@ public class ValoracionDTO {
         public ValoracionDTO build()               { return o; }
     }
 
-    // â”€â”€ Criterio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Criterio ──────────────────────────────────────────────────────────────
 
     public static class Criterio {
         private String texto;
-        private String valoracion;   // "BUENA/BIEN", "MUY BUENA/MUY BIEN"â€¦
+        private String valoracion;   // "BUENA/BIEN", "MUY BUENA/MUY BIEN"…
 
         private Criterio() {}
 

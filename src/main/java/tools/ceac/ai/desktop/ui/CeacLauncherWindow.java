@@ -1,8 +1,10 @@
 package tools.ceac.ai.desktop.ui;
 
 import tools.ceac.ai.mcp.outlook.OutlookMcpRuntimeApplication;
+import tools.ceac.ai.mcp.campus.interfaces.desktop.CampusEmbeddedPanel;
 import tools.ceac.ai.desktop.launcher.AuthExposureMode;
 import tools.ceac.ai.desktop.launcher.BootstrapResponse;
+import tools.ceac.ai.desktop.launcher.CampusRuntimeService;
 import tools.ceac.ai.desktop.launcher.ClientMcpResourceResponse;
 import tools.ceac.ai.desktop.launcher.ClientLoginRequest;
 import tools.ceac.ai.desktop.launcher.ClientLoginResponse;
@@ -13,6 +15,7 @@ import tools.ceac.ai.desktop.launcher.RemoteLauncherService;
 import tools.ceac.ai.desktop.launcher.RuntimeSettings;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.GridBagConstraints;
@@ -43,6 +46,21 @@ import javax.swing.SwingUtilities;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.context.ConfigurableApplicationContext;
 
+/**
+ * Main Swing window of CEAC AI Tools Desktop.
+ *
+ * <p>The window is the product shell. It is responsible for:
+ *
+ * <ul>
+ *   <li>desktop login against the control plane</li>
+ *   <li>projecting bootstrap data into the UI</li>
+ *   <li>starting and stopping each managed resource</li>
+ *   <li>embedding resource-specific UI such as the Campus JCEF panel</li>
+ * </ul>
+ *
+ * <p>It deliberately does not contain provisioning logic or direct Cloudflare management. Those
+ * concerns stay in {@code RemoteLauncherService} and in the backend control plane.
+ */
 class CeacLauncherWindow {
 
     private static final String DEFAULT_CONTROL_PLANE_URL = "https://control.dartmaker.com";
@@ -54,6 +72,7 @@ class CeacLauncherWindow {
 
     private final RemoteLauncherService remoteLauncherService = new RemoteLauncherService();
     private final QbidRuntimeService qbidRuntimeService = new QbidRuntimeService();
+    private final CampusRuntimeService campusRuntimeService = new CampusRuntimeService();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Consumer<String> logConsumer = this::appendLog;
     private final Consumer<AppRuntimeState> outlookStateConsumer = this::updateOutlookRuntimeState;
@@ -74,8 +93,10 @@ class CeacLauncherWindow {
 
     private ResourceWidgets outlookWidgets;
     private ResourceWidgets qbidWidgets;
+    private ResourceWidgets campusWidgets;
     private JTextField qbidUserField;
     private JPasswordField qbidPasswordField;
+    private JPanel campusPanelHost;
 
     private ConfigurableApplicationContext outlookContext;
     private ControlPlaneSession controlPlaneSession;
@@ -86,7 +107,7 @@ class CeacLauncherWindow {
     }
 
     private void createWindow() {
-        frame = new JFrame(developmentMode ? "CEAC IA Tools [DEV]" : "CEAC IA Tools");
+        frame = new JFrame(developmentMode ? "CEAC AI Tools [DEV]" : "CEAC AI Tools");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setLayout(new BorderLayout(12, 12));
         frame.getContentPane().setBackground(new Color(245, 241, 233));
@@ -97,9 +118,9 @@ class CeacLauncherWindow {
         JPanel header = new JPanel(new BorderLayout());
         header.setBorder(BorderFactory.createEmptyBorder(14, 14, 0, 14));
         header.setOpaque(false);
-        JLabel title = new JLabel("CEAC IA Tools");
+        JLabel title = new JLabel("CEAC AI Tools");
         title.setFont(title.getFont().deriveFont(java.awt.Font.BOLD, 28f));
-        JLabel subtitle = new JLabel("Launcher centralizado para Outlook MCP y QBid MCP.");
+        JLabel subtitle = new JLabel("Launcher centralizado para Outlook MCP, QBid MCP y Campus MCP.");
         subtitle.setForeground(MUTED);
         JPanel titlePanel = new JPanel(new GridLayout(2, 1));
         titlePanel.setOpaque(false);
@@ -112,6 +133,7 @@ class CeacLauncherWindow {
         tabs.addTab("Login", buildLoginTab());
         tabs.addTab("Outlook MCP", buildResourceTab(ManagedMcpKind.OUTLOOK));
         tabs.addTab("QBid MCP", buildResourceTab(ManagedMcpKind.QBID));
+        tabs.addTab("Campus MCP", buildResourceTab(ManagedMcpKind.CAMPUS));
         frame.add(tabs, BorderLayout.CENTER);
 
         logArea = new JTextArea();
@@ -186,6 +208,9 @@ class CeacLauncherWindow {
     }
 
     private JPanel buildResourceTab(ManagedMcpKind kind) {
+        if (kind == ManagedMcpKind.CAMPUS) {
+            return buildCampusTab();
+        }
         JPanel panel = new JPanel(new BorderLayout(12, 12));
         panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
         JPanel top = new JPanel(new GridLayout(1, 2, 12, 12));
@@ -203,6 +228,26 @@ class CeacLauncherWindow {
             panel.add(top, BorderLayout.CENTER);
             panel.add(buildQbidActions(widgets), BorderLayout.SOUTH);
         }
+        return panel;
+    }
+
+    private JPanel buildCampusTab() {
+        JPanel panel = new JPanel(new BorderLayout(12, 12));
+        panel.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+
+        campusWidgets = new ResourceWidgets(ManagedMcpKind.CAMPUS);
+        JPanel top = new JPanel(new GridLayout(1, 2, 12, 12));
+        top.add(buildResourceBootstrapCard(campusWidgets));
+        top.add(buildResourceRuntimeCard(campusWidgets, false));
+
+        campusPanelHost = new JPanel(new BorderLayout());
+        campusPanelHost.setBorder(BorderFactory.createTitledBorder("Login Campus"));
+        campusPanelHost.setBackground(Color.WHITE);
+        campusPanelHost.add(new JLabel("Arranca Campus MCP para cargar aqui el navegador embebido y reciclar la sesion."), BorderLayout.NORTH);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(campusPanelHost, BorderLayout.CENTER);
+        panel.add(buildCampusActions(campusWidgets), BorderLayout.SOUTH);
         return panel;
     }
 
@@ -303,6 +348,28 @@ class CeacLauncherWindow {
         return card;
     }
 
+    private JPanel buildCampusActions(ResourceWidgets widgets) {
+        JPanel card = card("Operativa Campus");
+        JPanel buttons = new JPanel();
+        widgets.start = new JButton("Arrancar MCP");
+        widgets.stop = new JButton("Parar MCP");
+        widgets.copy = new JButton("Copiar MCP URL");
+        JButton validate = new JButton("Validar estado");
+        JButton openSwagger = new JButton("Abrir Swagger");
+        JButton copySwagger = new JButton("Copiar Swagger");
+        JButton resetLogin = new JButton("Reiniciar login Campus");
+        validate.addActionListener(e -> runAsync(this::validateCampus));
+        widgets.start.addActionListener(e -> runAsync(this::startCampus));
+        widgets.stop.addActionListener(e -> runAsync(this::stopCampus));
+        widgets.copy.addActionListener(e -> copyUrl(ManagedMcpKind.CAMPUS));
+        openSwagger.addActionListener(e -> openUrl(extractUrl(widgets.swagger.getText())));
+        copySwagger.addActionListener(e -> copyLabelUrl(widgets.swagger));
+        resetLogin.addActionListener(e -> resetCampusLogin());
+        buttons.add(validate); buttons.add(widgets.start); buttons.add(widgets.stop); buttons.add(widgets.copy); buttons.add(openSwagger); buttons.add(copySwagger); buttons.add(resetLogin);
+        card.add(buttons, BorderLayout.CENTER);
+        return card;
+    }
+
     private void login() throws Exception {
         String username = usernameField.getText().trim();
         String password = new String(passwordField.getPassword());
@@ -323,6 +390,7 @@ class CeacLauncherWindow {
         });
         applyBootstrap(outlookWidgets, controlPlaneSession.bootstrapFor("outlook"));
         applyBootstrap(qbidWidgets, controlPlaneSession.bootstrapFor("qbid"));
+        applyBootstrap(campusWidgets, controlPlaneSession.bootstrapFor("campus"));
     }
 
     private void validateOutlook() throws Exception { validateResource(ManagedMcpKind.OUTLOOK, outlookWidgets); }
@@ -332,6 +400,7 @@ class CeacLauncherWindow {
             throw new IllegalStateException("Debes indicar usuario y password de qBid.");
         }
     }
+    private void validateCampus() throws Exception { validateResource(ManagedMcpKind.CAMPUS, campusWidgets); }
 
     private void validateResource(ManagedMcpKind kind, ResourceWidgets widgets) throws Exception {
         List<String> errors = remoteLauncherService.validatePrerequisites(controlPlaneSession, kind);
@@ -397,6 +466,31 @@ class CeacLauncherWindow {
         SwingUtilities.invokeLater(() -> { qbidWidgets.start.setEnabled(controlPlaneSession != null); qbidWidgets.stop.setEnabled(false); });
     }
 
+    private void startCampus() throws Exception {
+        BootstrapResponse bootstrap = requireBootstrap(ManagedMcpKind.CAMPUS);
+        if (bootstrap.authExposureMode() != AuthExposureMode.CENTRAL_AUTH) {
+            throw new IllegalStateException("Se requiere CENTRAL_AUTH.");
+        }
+        validateCampus();
+        remoteLauncherService.startManagedTunnel(ManagedMcpKind.CAMPUS, bootstrap);
+        set(campusWidgets.tunnel, "Tunnel: activo", OK);
+        CampusEmbeddedPanel panel = campusRuntimeService.start(bootstrap);
+        mountCampusPanel(panel);
+        set(campusWidgets.app, "Runtime: activo", OK);
+        set(campusWidgets.swagger, "Swagger: " + campusRuntimeService.getSwaggerUrl(), OK);
+        SwingUtilities.invokeLater(() -> { campusWidgets.start.setEnabled(false); campusWidgets.stop.setEnabled(true); });
+    }
+
+    private void stopCampus() {
+        campusRuntimeService.stop();
+        remoteLauncherService.stopTunnel(ManagedMcpKind.CAMPUS);
+        set(campusWidgets.tunnel, "Tunnel: detenido", MUTED);
+        set(campusWidgets.app, "Runtime: detenido", MUTED);
+        set(campusWidgets.swagger, "Swagger: pending", MUTED);
+        clearCampusPanel();
+        SwingUtilities.invokeLater(() -> { campusWidgets.start.setEnabled(controlPlaneSession != null); campusWidgets.stop.setEnabled(false); });
+    }
+
     private void applyBootstrap(ResourceWidgets widgets, BootstrapResponse bootstrap) {
         if (widgets == null) return;
         if (bootstrap == null) { resetResource(widgets); return; }
@@ -435,10 +529,12 @@ class CeacLauncherWindow {
     private void logout() {
         stopOutlook();
         stopQbid();
+        stopCampus();
         controlPlaneSession = null;
         resetLogin();
         resetResource(outlookWidgets);
         resetResource(qbidWidgets);
+        resetResource(campusWidgets);
     }
 
     private void resetLogin() {
@@ -467,6 +563,9 @@ class CeacLauncherWindow {
         widgets.start.setEnabled(false);
         widgets.stop.setEnabled(false);
         widgets.copy.setEnabled(false);
+        if (widgets.kind == ManagedMcpKind.CAMPUS) {
+            clearCampusPanel();
+        }
     }
 
     private void loadDefaults() {
@@ -541,10 +640,44 @@ class CeacLauncherWindow {
     private void shutdown() {
         stopOutlook();
         stopQbid();
+        stopCampus();
         LauncherEvents.unregister(outlookStateConsumer);
         GuiLogPublisher.unregister(logConsumer);
         remoteLauncherService.shutdown();
         executor.shutdownNow();
+    }
+
+    private void resetCampusLogin() {
+        CampusEmbeddedPanel panel = campusRuntimeService.getEmbeddedPanel();
+        if (panel == null) {
+            appendLog("[launcher] ERROR: Campus MCP no esta activo." + System.lineSeparator());
+            return;
+        }
+        panel.resetSession();
+        appendLog("[launcher] Login de Campus reiniciado." + System.lineSeparator());
+    }
+
+    private void mountCampusPanel(CampusEmbeddedPanel panel) {
+        SwingUtilities.invokeLater(() -> {
+            campusPanelHost.removeAll();
+            campusPanelHost.add(panel.asComponent(), BorderLayout.CENTER);
+            campusPanelHost.revalidate();
+            campusPanelHost.repaint();
+        });
+    }
+
+    private void clearCampusPanel() {
+        if (campusPanelHost == null) {
+            return;
+        }
+        SwingUtilities.invokeLater(() -> {
+            campusPanelHost.removeAll();
+            JLabel placeholder = new JLabel("Arranca Campus MCP para cargar aqui el navegador embebido y reciclar la sesion.");
+            placeholder.setForeground(MUTED);
+            campusPanelHost.add(placeholder, BorderLayout.NORTH);
+            campusPanelHost.revalidate();
+            campusPanelHost.repaint();
+        });
     }
 
     private JPanel card(String title) {

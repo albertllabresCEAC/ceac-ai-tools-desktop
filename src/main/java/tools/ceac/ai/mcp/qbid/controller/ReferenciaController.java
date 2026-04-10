@@ -30,9 +30,9 @@ public class ReferenciaController {
         }
     }
 
-    // â”€â”€ Cuaderno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Cuaderno ──────────────────────────────────────────────────────────
 
-    /** REF19 â€” ValoraciÃ³n global del cuaderno */
+    /** REF19 — Valoración global del cuaderno */
     @GetMapping("/REF19/{quadernId}")
     public ResponseEntity<ReferenciaDTO> ref19(
             @RequestHeader("Authorization") String auth,
@@ -44,7 +44,7 @@ public class ReferenciaController {
                 "REF19_" + quadernId + ".pdf"));
     }
 
-    /** REF20 â€” CalificaciÃ³n final FCT */
+    /** REF20 — Calificación final FCT */
     @GetMapping("/REF20/{quadernId}")
     public ResponseEntity<ReferenciaDTO> ref20(
             @RequestHeader("Authorization") String auth,
@@ -56,7 +56,7 @@ public class ReferenciaController {
                 "REF20_" + quadernId + ".pdf"));
     }
 
-    /** REF22 â€” Expediente del cuaderno */
+    /** REF22 — Expediente del cuaderno */
     @GetMapping("/REF22/{quadernId}")
     public ResponseEntity<ReferenciaDTO> ref22(
             @RequestHeader("Authorization") String auth,
@@ -68,9 +68,9 @@ public class ReferenciaController {
                 "REF22_" + quadernId + ".pdf"));
     }
 
-    // â”€â”€ Seguimiento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Seguimiento ───────────────────────────────────────────────────────
 
-    /** REF07 â€” Seguimiento de la FPCT */
+    /** REF07 — Seguimiento de la FPCT */
     @GetMapping("/REF07/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref07(
             @RequestHeader("Authorization") String auth,
@@ -83,7 +83,7 @@ public class ReferenciaController {
                 "REF07_" + conveniId + ".pdf"));
     }
 
-    /** REF10 â€” Cuestionario al Centro de Trabajo */
+    /** REF10 — Cuestionario al Centro de Trabajo */
     @GetMapping("/REF10/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref10(
             @RequestHeader("Authorization") String auth,
@@ -97,7 +97,7 @@ public class ReferenciaController {
                 "REF10_" + conveniId + ".pdf"));
     }
 
-    /** REF11 â€” HomologaciÃ³n */
+    /** REF11 — Homologación */
     @GetMapping("/REF11/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref11(
             @RequestHeader("Authorization") String auth,
@@ -111,7 +111,7 @@ public class ReferenciaController {
                 "REF11_" + conveniId + ".pdf"));
     }
 
-    /** REF18 â€” ValoraciÃ³n expediente (requiere cod_visita del SeguimientoDTO.Valoracion) */
+    /** REF18 — Valoración expediente (requiere cod_visita del SeguimientoDTO.Valoracion) */
     @GetMapping("/REF18/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref18(
             @RequestHeader("Authorization") String auth,
@@ -125,9 +125,9 @@ public class ReferenciaController {
                 "REF18_" + conveniId + ".pdf"));
     }
 
-    // â”€â”€ Convenio â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Convenio ───────────────────────────────────────────────────────────
 
-    /** REF15 â€” ValoraciÃ³n de evaluaciÃ³n (de la empresa) */
+    /** REF15 — Valoración de evaluación (de la empresa) */
     @GetMapping("/REF15/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref15(
             @RequestHeader("Authorization") String auth,
@@ -141,7 +141,7 @@ public class ReferenciaController {
                 "REF15_" + conveniId + ".pdf"));
     }
 
-    /** REF05 â€” Documento del acuerdo */
+    /** REF05 — Documento del acuerdo */
     @GetMapping("/REF05/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref05(
             @RequestHeader("Authorization") String auth,
@@ -156,7 +156,7 @@ public class ReferenciaController {
                 "REF05_" + conveniId + ".pdf"));
     }
 
-    /** REF05_Baja â€” Documento de finalizaciÃ³n anticipada del acuerdo */
+    /** REF05_Baja — Documento de finalización anticipada del acuerdo */
     @GetMapping("/REF05-baja/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref05Baja(
             @RequestHeader("Authorization") String auth,
@@ -171,7 +171,7 @@ public class ReferenciaController {
                 "REF05_Baja_" + conveniId + ".pdf"));
     }
 
-    /** REF06 â€” Plan de actividades del acuerdo */
+    /** REF06 — Plan de actividades del acuerdo */
     @GetMapping("/REF06/{conveniId}/{conveniProvId}")
     public ResponseEntity<ReferenciaDTO> ref06(
             @RequestHeader("Authorization") String auth,

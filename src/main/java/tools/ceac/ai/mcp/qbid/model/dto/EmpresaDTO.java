@@ -4,9 +4,9 @@ import java.util.List;
 
 public class EmpresaDTO {
 
-    // â”€â”€ IdentificaciÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Identificación ────────────────────────────────────────────────────────
     private String codEmpresa;       // hidden empresaPk
-    private String tipoEntidad;      // "Entidad EspaÃ±ola", "Entidad Extranjera"â€¦
+    private String tipoEntidad;      // "Entidad Española", "Entidad Extranjera"…
     private String codigo;           // "ME 433101"
     private String estado;           // "VALIDADA"
     private String cifNif;           // "B26811612"
@@ -15,7 +15,7 @@ public class EmpresaDTO {
     private String numTrabajadores;  // "1-9"
     private String nombre;           // "CORNER ESTUDIOS TECNOLOGIA SL"
 
-    // â”€â”€ Datos actividad â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Datos actividad ───────────────────────────────────────────────────────
     private String ubicacion;
     private String pais;
     private String codigoPostal;
@@ -30,7 +30,7 @@ public class EmpresaDTO {
     private String telefono;
     private String fax;
 
-    // â”€â”€ Centros de trabajo (resumen) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Centros de trabajo (resumen) ──────────────────────────────────────────
     private List<CentroResumen> centros;
 
     private EmpresaDTO() {}
@@ -89,7 +89,7 @@ public class EmpresaDTO {
         public EmpresaDTO build()                   { return o; }
     }
 
-    // â”€â”€ CentroResumen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CentroResumen ─────────────────────────────────────────────────────────
 
     public static class CentroResumen {
         private String codCentro;   // arg de doDetall('303630')

@@ -29,10 +29,10 @@ public class FichaAlumnoParser {
                 .apellidos(byLabel(doc, "Apellidos:"))
                 .fechaNacimiento(byLabel(doc, "Fecha de nacimiento:"))
                 .sexo(byLabel(doc, "Sexo:"))
-                .direccion(byLabel(doc, "DirecciÃ³n:"))
-                .telefono(byLabel(doc, "TelÃ©fono:"))
-                .pais(byLabel(doc, "PaÃ­s(DirecciÃ³n):"))
-                .codigoPostal(byLabel(doc, "CÃ³digo Postal:"))
+                .direccion(byLabel(doc, "Dirección:"))
+                .telefono(byLabel(doc, "Teléfono:"))
+                .pais(byLabel(doc, "País(Dirección):"))
+                .codigoPostal(byLabel(doc, "Código Postal:"))
                 .municipio(byLabel(doc, "Municipio/Localidad:"))
                 .inss(byLabel(doc, "INSS/Mutua:"))
                 .nass(byLabel(doc, "NASS:"))
@@ -44,7 +44,7 @@ public class FichaAlumnoParser {
                 .build();
     }
 
-    // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     /** Valor de un hidden input por name */
     private String formValue(Document doc, String name) {
@@ -65,7 +65,7 @@ public class FichaAlumnoParser {
     }
 
     /**
-     * Para la mayorÃ­a de campos: el siguiente sibling del label.control-label
+     * Para la mayoría de campos: el siguiente sibling del label.control-label
      * es un div con un <p class="form-control-static"> o un <a>.
      */
     private String byLabel(Document doc, String labelText) {
@@ -78,10 +78,10 @@ public class FichaAlumnoParser {
         return "";
     }
 
-    /** El correo estÃ¡ en un <a href="mailto:..."> dentro del div siguiente al label */
+    /** El correo está en un <a href="mailto:..."> dentro del div siguiente al label */
     private String parseEmail(Document doc) {
         for (Element label : doc.select("label.control-label")) {
-            if (label.text().trim().equals("Correo electrÃ³nico:")) {
+            if (label.text().trim().equals("Correo electrónico:")) {
                 Element sibling = label.nextElementSibling();
                 if (sibling != null) {
                     Element link = sibling.selectFirst("a[href^=mailto]");
@@ -104,8 +104,8 @@ public class FichaAlumnoParser {
             String estado = "";
             Element heading = panelGroup.selectFirst(".panel-heading");
             if (heading != null) {
-                // El heading contiene el texto del estado + un badge con el nÃºmero
-                // Usamos ownText() para evitar coger el nÃºmero del badge
+                // El heading contiene el texto del estado + un badge con el número
+                // Usamos ownText() para evitar coger el número del badge
                 estado = heading.select(".panel-title a").first() != null
                         ? cleanHeadingText(heading.select(".panel-title a").first())
                         : heading.text().trim();
@@ -118,7 +118,7 @@ public class FichaAlumnoParser {
                 String codCuaderno = m.group(1);
                 String codPrograma = m.group(2);
 
-                // El nombre del estudio estÃ¡ en el label strong dentro del mismo row
+                // El nombre del estudio está en el label strong dentro del mismo row
                 String estudio = "";
                 Element row = btn.closest(".form-group");
                 if (row != null) {
@@ -143,7 +143,7 @@ public class FichaAlumnoParser {
 
     /**
      * El <a> del heading tiene el texto del estado + el badge (<span class="badge">N</span>).
-     * Queremos sÃ³lo el texto sin el nÃºmero.
+     * Queremos sólo el texto sin el número.
      */
     private String cleanHeadingText(Element anchor) {
         // Clona para no mutar el DOM

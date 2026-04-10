@@ -21,7 +21,7 @@ public class ConveniosController {
         this.sesionCache = sesionCache;
     }
 
-    // â”€â”€ Helper: obtiene sesiÃ³n con auto-renovaciÃ³n si expira â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Helper: obtiene sesión con auto-renovación si expira ─────────────────
     private String session(String auth) throws Exception {
         try {
             return sesionCache.resolveSession(auth);

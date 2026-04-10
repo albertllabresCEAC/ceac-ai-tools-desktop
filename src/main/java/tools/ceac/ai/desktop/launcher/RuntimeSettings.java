@@ -3,6 +3,12 @@ package tools.ceac.ai.desktop.launcher;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Reduced set of Spring properties derived from bootstrap and injected into a local runtime.
+ *
+ * <p>This record isolates the desktop shell from the details of each MCP runtime while keeping the
+ * bootstrap-to-runtime mapping explicit and testable.
+ */
 public record RuntimeSettings(
         String mcpPublicBaseUrl,
         String authPublicBaseUrl,
@@ -13,6 +19,9 @@ public record RuntimeSettings(
         String resourceName
 ) {
 
+    /**
+     * Converts the runtime settings to the Spring property map expected by the local runtime.
+     */
     public Map<String, Object> toSpringProperties() {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("MCP_PUBLIC_BASE_URL", mcpPublicBaseUrl);

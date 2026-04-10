@@ -50,3 +50,6 @@ cloudflared.stdout.log
 cloudflared.stderr.log
 *.stdout.log
 *.stderr.log
+jcef-bundle/
+jcef-cache/
+jcef.log

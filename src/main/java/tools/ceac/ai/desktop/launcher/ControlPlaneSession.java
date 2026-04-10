@@ -3,11 +3,11 @@ package tools.ceac.ai.desktop.launcher;
 import java.util.List;
 
 /**
- * Estado local de sesion del launcher despues de autenticar con el control plane.
+ * Local desktop session after authenticating with the control plane.
  *
- * <p>La sesion es global para el desktop, pero puede contener bootstrap para varios recursos MCP.
- * En la practica, la pestana {@code Login} rellena esta estructura y las pestanas {@code Outlook
- * MCP} y {@code QBid MCP} leen de aqui su bootstrap correspondiente.
+ * <p>The session is global for the desktop shell, but it can carry bootstrap for several MCP
+ * resources. In practice the {@code Login} tab fills this structure and the resource tabs read
+ * their specific bootstrap from here.
  */
 public record ControlPlaneSession(
         String controlPlaneBaseUrl,
@@ -21,15 +21,15 @@ public record ControlPlaneSession(
         List<ClientMcpResourceResponse> resources
 ) {
     /**
-     * Indica si el bootstrap principal de la sesion usa auth centralizada.
+     * Returns whether the primary bootstrap of the session uses centralized auth.
      */
     public boolean usesCentralAuth() {
         return bootstrap != null && bootstrap.authExposureMode() == AuthExposureMode.CENTRAL_AUTH;
     }
 
     /**
-     * Devuelve el bootstrap del recurso indicado, o {@code null} si ese recurso no esta disponible
-     * para el usuario autenticado.
+     * Returns the bootstrap of the requested resource, or {@code null} when that resource is not
+     * available to the authenticated desktop identity.
      */
     public BootstrapResponse bootstrapFor(String resourceKey) {
         if (resources != null) {

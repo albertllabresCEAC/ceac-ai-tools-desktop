@@ -59,9 +59,9 @@ public class ConveniosService {
     }
 
     /**
-     * Listado enriquecido: igual que getListado pero aÃ±ade codAlumno
+     * Listado enriquecido: igual que getListado pero añade codAlumno
      * navegando al detalle de cada convenio.
-     * MÃ¡s lento â€” una request extra por alumno.
+     * Más lento — una request extra por alumno.
      */
     public List<ConvenioDTO> getListadoEnriquecido(String jsessionid, String plan) throws Exception {
         List<ConvenioDTO> listado = getListado(jsessionid, plan);
@@ -77,7 +77,7 @@ public class ConveniosService {
                 // Sustituir el DTO con codAlumno relleno
                 listado.set(i, ConvenioDTO.builder()
                         .alumno(c.getAlumno())
-                        .codAlumno(detalle.getCodAlumno())   // â† enriquecido
+                        .codAlumno(detalle.getCodAlumno())   // ← enriquecido
                         .estudio(c.getEstudio())
                         .estado(c.getEstado())
                         .codConvenio(c.getCodConvenio())
@@ -87,7 +87,7 @@ public class ConveniosService {
                         .plan(c.getPlan())
                         .build());
             } catch (Exception e) {
-                // Si falla el detalle de un alumno, continuamos con los demÃ¡s
+                // Si falla el detalle de un alumno, continuamos con los demás
             }
         }
 
@@ -95,7 +95,7 @@ public class ConveniosService {
     }
 
     /**
-     * Detalle estructurado de un convenio â€” devuelve DTO parseado.
+     * Detalle estructurado de un convenio — devuelve DTO parseado.
      */
     public DetalleConvenioDTO getDetalle(String jsessionid,
                                          String codConvenio,
@@ -106,7 +106,7 @@ public class ConveniosService {
     }
 
     /**
-     * Detalle HTML crudo â€” Ãºtil para depuraciÃ³n.
+     * Detalle HTML crudo — útil para depuración.
      */
     public String getDetalleHtml(String jsessionid,
                                  String codConvenio,
@@ -176,7 +176,7 @@ public class ConveniosService {
     }
 
     /**
-     * EnvÃ­a el formulario de informe periÃ³dico a qBID.
+     * Envía el formulario de informe periódico a qBID.
      * {@code moduleaction} determina si es un guardado ("save") o una firma definitiva ("signar").
      */
     private DetalleInformeDTO postInforme(String jsessionid,
@@ -187,7 +187,7 @@ public class ConveniosService {
                 jsessionid, req.getCodConvenio(), req.getCodTemporal(),
                 req.getConveniValoracioPk(), req.getHashCode());
 
-        // ConstrucciÃ³n del cuerpo del POST (orden relevante para qBID)
+        // Construcción del cuerpo del POST (orden relevante para qBID)
         Map<String, String> params = new LinkedHashMap<>();
         params.put("moduleaction",              moduleaction);
         params.put("conveni_valoracio_pk",      req.getConveniValoracioPk());
@@ -202,7 +202,7 @@ public class ConveniosService {
         params.put("language",                  "SP");
         params.put("config_valoraciones_negativas", "null");
 
-        // Valoraciones por actividad: inp_XXXXX (adecuaciÃ³n tutor) + inp_extra_XXXXX (valoraciÃ³n empresa)
+        // Valoraciones por actividad: inp_XXXXX (adecuación tutor) + inp_extra_XXXXX (valoración empresa)
         for (GuardarInformeRequest.ValoracionItem item : req.getValoraciones()) {
             params.put("inp_"       + item.getActividadId(),
                     GuardarInformeRequest.AdecuacionTutor.fromNombre(item.getAdecuacionTutor()).getCodigo());

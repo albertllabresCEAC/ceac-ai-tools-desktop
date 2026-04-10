@@ -9,7 +9,7 @@ public class AcuerdoCuadernoDTO {
     private String estado;         // "En curso"
     private String horasReales;    // "0h"
     private String horasEstimadas; // "518h"
-    private String codConvenio;    // extraÃ­do del onclick
+    private String codConvenio;    // extraído del onclick
     private String codTemporal;
     private String newSystem;
 

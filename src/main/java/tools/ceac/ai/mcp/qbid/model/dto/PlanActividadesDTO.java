@@ -4,7 +4,7 @@ import java.util.List;
 
 public class PlanActividadesDTO {
 
-    // â”€â”€ Campos a nivel de convenio (fuera de las tabs) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Campos a nivel de convenio (fuera de las tabs) ────────────────────────
     private String modalidadEnsenanza;
     private String movilidad;
     private String modalidadPresencial;
@@ -15,7 +15,7 @@ public class PlanActividadesDTO {
     private String empresa;
     private String centroDeTrabajo;
 
-    // â”€â”€ Campos a nivel de plan (dentro de la tab) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Campos a nivel de plan (dentro de la tab) ─────────────────────────────
     private String conveniPlaPk;
     private String ajutConveni;          // campo oculto del form (e.g. "1913;10267"); necesario para el POST de guardar
     private String periodo;
@@ -25,7 +25,7 @@ public class PlanActividadesDTO {
     private String codPlaOrigenParamName;  // nombre completo del input autocomplete (e.g. "cod_pla_origen811947214"); necesario para el POST
     private String instalaciones;
 
-    // â”€â”€ Actividades â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Actividades ───────────────────────────────────────────────────────────
     private List<ItemPlanDTO> actividades;
 
     private PlanActividadesDTO() {}
