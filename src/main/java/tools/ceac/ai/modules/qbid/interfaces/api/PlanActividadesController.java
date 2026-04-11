@@ -1,10 +1,8 @@
 package tools.ceac.ai.modules.qbid.interfaces.api;
 
-import tools.ceac.ai.modules.qbid.domain.exception.SessionExpiredException;
 import tools.ceac.ai.modules.qbid.domain.model.GuardarPlanRequest;
 import tools.ceac.ai.modules.qbid.domain.model.PlanActividadesDTO;
 import tools.ceac.ai.modules.qbid.application.service.PlanActividadesService;
-import tools.ceac.ai.modules.qbid.application.service.SesionCache;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,19 +13,15 @@ import java.util.List;
 public class PlanActividadesController {
 
     private final PlanActividadesService service;
-    private final SesionCache sesionCache;
+    private final QbidApiSessionProvider sessionProvider;
 
-    public PlanActividadesController(PlanActividadesService service, SesionCache sesionCache) {
-        this.service     = service;
-        this.sesionCache = sesionCache;
+    public PlanActividadesController(PlanActividadesService service, QbidApiSessionProvider sessionProvider) {
+        this.service = service;
+        this.sessionProvider = sessionProvider;
     }
 
     private String session(String auth) throws Exception {
-        try {
-            return sesionCache.resolveSession(auth);
-        } catch (SessionExpiredException e) {
-            return sesionCache.renewSession(auth);
-        }
+        return sessionProvider.currentSession();
     }
 
     @PostMapping("/{codConvenio}/validar")

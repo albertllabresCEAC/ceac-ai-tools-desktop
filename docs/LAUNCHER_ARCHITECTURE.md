@@ -8,9 +8,10 @@ Its job is to:
 
 - authenticate the user against the control plane
 - load bootstrap per resource
+- mint local API tokens per resource for Swagger and local REST checks
 - start local tunnels
 - start local MCP runtimes
-- host resource-specific embedded UI when a runtime needs it, such as Campus
+- host resource-specific embedded UI when a runtime needs it, such as the Campus login modal
 
 It is not the control plane.
 
@@ -93,6 +94,7 @@ Responsibilities:
 
 - keep session state in memory
 - project bootstrap values into the UI
+- project launcher-issued local API tokens into each module tab
 - coordinate actions on each tab
 - show operational logs and failures
 
@@ -119,6 +121,7 @@ Contains:
 - resolved identity
 - bootstrap per resource module
 - list of available resource modules
+- launcher signing context for local API tokens
 
 ### `QbidRuntimeService`
 
@@ -126,8 +129,9 @@ Runs qBid as an embedded Spring context.
 
 Responsibilities:
 
-- validate qBid credentials locally
+- validate qBid credentials against qBid before startup
 - inject OAuth and public URL settings from bootstrap
+- inject launcher token validation settings for local-only API access
 - start and stop the qBid runtime
 
 ### `CampusRuntimeService`
@@ -137,7 +141,8 @@ Runs Campus as an embedded Spring context.
 Responsibilities:
 
 - inject OAuth and public URL settings from bootstrap
-- expose the embeddable JCEF panel used by the `Campus MCP` tab
+- expose the embeddable JCEF panel used by the Campus login modal
+- inject launcher token validation settings for local-only API access
 - start and stop the Campus runtime
 
 ### `OutlookRuntimeService`
@@ -148,6 +153,7 @@ Responsibilities:
 
 - start and stop the Outlook runtime
 - wait for local OAuth metadata to become reachable
+- inject launcher token validation settings for local-only API access
 - keep Outlook startup symmetric with qBid and Campus
 
 ## UI model
@@ -163,7 +169,7 @@ Its output is:
 - bootstrap for `campus`
 - bootstrap for `qbid`
 
-### Outlook MCP tab
+### Outlook bot tab
 
 Operates the Outlook runtime.
 
@@ -174,7 +180,7 @@ Depends on:
 - local `cloudflared`
 - Outlook installed locally
 
-### Campus MCP tab
+### Campus bot tab
 
 Operates the Campus runtime.
 
@@ -184,9 +190,9 @@ Depends on:
 - Campus bootstrap
 - local `cloudflared`
 - local JCEF runtime
-- Moodle session acquired through the embedded browser
+- Moodle session acquired through the embedded browser modal
 
-### QBid MCP tab
+### QBid bot tab
 
 Operates the qBid runtime.
 
@@ -197,40 +203,43 @@ Depends on:
 - local `cloudflared`
 - local qBid credentials
 
-## Flow: Login -> Outlook MCP
+## Flow: Login -> Outlook bot
 
 1. the user logs in
 2. the launcher stores `ControlPlaneSession`
-3. the `Outlook MCP` tab displays bootstrap data
+3. the `Outlook bot` tab displays bootstrap data
 4. on start:
    - prerequisites are validated
    - `cloudflared` is started
    - the Outlook Spring runtime is started
+5. the launcher shows a local API token that is valid only for `localhost`
 
-## Flow: Login -> Campus MCP
+## Flow: Login -> Campus bot
 
 1. the user logs in against the control plane
 2. the launcher stores `ControlPlaneSession`
-3. the `Campus MCP` tab displays bootstrap data
+3. the `Campus bot` tab displays bootstrap data
 4. on start:
    - prerequisites are validated
    - `cloudflared` is started
    - the Campus Spring runtime is started
-   - the JCEF panel is mounted in the tab
-5. the user logs in through the embedded browser
+   - the login modal is opened when Campus authentication is needed
+5. the user logs in through the embedded browser modal
 6. the runtime copies Moodle cookies into the Java HTTP client and reuses that session for REST and MCP
+7. the launcher shows a local API token that is valid only for `localhost`
 
-## Flow: Login -> QBid MCP
+## Flow: Login -> QBid bot
 
 1. the user logs in
 2. the launcher stores `ControlPlaneSession`
-3. the `QBid MCP` tab displays bootstrap data
+3. the `QBid bot` tab displays bootstrap data
 4. the user provides qBid credentials
-5. the launcher validates those credentials locally
+5. the launcher validates those credentials against qBid
 6. on start:
    - prerequisites are validated
    - `cloudflared` is started
    - the qBid Spring runtime is started
+7. the launcher shows a local API token that is valid only for `localhost`
 
 ## Why the runtimes are separate
 
@@ -250,7 +259,9 @@ The shell now treats all three runtimes through the same high-level pattern:
 1. validate prerequisites
 2. start `cloudflared`
 3. start the embedded runtime service
-4. expose the public MCP URL and local Swagger URL
+4. expose the public MCP URL
+5. expose local-only API and Swagger endpoints on `127.0.0.1`
+6. mint a launcher-issued local API token for Swagger and manual REST checks
 
 ## Security rules
 
@@ -258,6 +269,9 @@ The shell now treats all three runtimes through the same high-level pattern:
 - Cloudflare administrative credentials never reach the desktop
 - qBid credentials never leave the local machine
 - the OAuth issuer announced to external MCP clients must be public, never localhost
+- local REST API, OpenAPI and Swagger are reachable only on `127.0.0.1`
+- local API tokens are minted by the launcher, not by the control plane
+- remote clients must use the public MCP endpoint and its central OAuth contract, never the local API token
 
 ## Extension points
 

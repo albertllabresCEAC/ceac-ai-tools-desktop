@@ -37,10 +37,14 @@ class ControlPlaneSessionTest {
                 "albert",
                 "albert.llabres@ceacfp.es",
                 legacyBootstrap,
+                null,
+                null,
                 null
         );
 
         assertThat(session.bootstrapFor("outlook")).isEqualTo(legacyBootstrap);
+        assertThat(session.resourceFor("outlook")).isNotNull();
+        assertThat(session.resourceFor("outlook").bootstrap()).isEqualTo(legacyBootstrap);
         assertThat(session.bootstrapFor("qbid")).isNull();
     }
 
@@ -74,7 +78,9 @@ class ControlPlaneSessionTest {
                 "albert",
                 "albert.llabres@ceacfp.es",
                 null,
-                List.of(new ClientMcpResourceResponse("qbid", "QBid MCP", qbidBootstrap))
+                List.of(new ClientMcpResourceResponse("qbid", "QBid MCP", qbidBootstrap, null)),
+                null,
+                null
         );
 
         assertThat(session.bootstrapFor("qbid")).isEqualTo(qbidBootstrap);

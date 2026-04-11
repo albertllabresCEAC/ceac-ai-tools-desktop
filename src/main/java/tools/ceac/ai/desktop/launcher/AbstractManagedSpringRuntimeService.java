@@ -28,6 +28,8 @@ import tools.ceac.ai.desktop.ui.GuiLogPublisher;
  *   <li>reserve a local port before startup</li>
  *   <li>launch a dedicated Spring context on that port</li>
  *   <li>wait for OAuth metadata to become reachable</li>
+ *   <li>bind the REST API to {@code 127.0.0.1} while keeping the public MCP contract intact</li>
+ *   <li>optionally trust launcher-issued local API tokens for Swagger and local REST checks</li>
  *   <li>publish launcher logs with a resource-specific prefix</li>
  * </ul>
  */
@@ -53,12 +55,14 @@ abstract class AbstractManagedSpringRuntimeService {
     }
 
     protected final Map<String, Object> standardRuntimeProperties(BootstrapResponse bootstrap,
+                                                                  ControlPlaneSession session,
                                                                   String applicationName,
                                                                   boolean headless,
                                                                   String serverName,
                                                                   String instructions) {
         Map<String, Object> properties = new LinkedHashMap<>();
         properties.put("server.port", bootstrap.localPort());
+        properties.put("server.address", "127.0.0.1");
         properties.put("server.forward-headers-strategy", "framework");
         properties.put("spring.application.name", applicationName);
         properties.put("spring.main.headless", Boolean.toString(headless));
@@ -76,6 +80,12 @@ abstract class AbstractManagedSpringRuntimeService {
         properties.put("mcp.remote.auth.required-audience", bootstrap.requiredAudience());
         properties.put("mcp.remote.auth.required-scope", bootstrap.requiredScope());
         properties.put("mcp.remote.auth.resource-name", bootstrap.resourceName());
+        if (session != null && session.launcherTokenIssuer() != null && !session.launcherTokenIssuer().isBlank()
+                && session.launcherTokenSecret() != null && !session.launcherTokenSecret().isBlank()) {
+            properties.put("mcp.remote.launcher.enabled", "true");
+            properties.put("mcp.remote.launcher.issuer-uri", session.launcherTokenIssuer());
+            properties.put("mcp.remote.launcher.shared-secret", session.launcherTokenSecret());
+        }
         return properties;
     }
 

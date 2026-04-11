@@ -1,10 +1,8 @@
 package tools.ceac.ai.modules.qbid.interfaces.api;
 
 import tools.ceac.ai.modules.qbid.application.port.out.QbidEndpointFactory;
-import tools.ceac.ai.modules.qbid.domain.exception.SessionExpiredException;
 import tools.ceac.ai.modules.qbid.domain.model.ReferenciaDTO;
 import tools.ceac.ai.modules.qbid.application.service.ReferenciaService;
-import tools.ceac.ai.modules.qbid.application.service.SesionCache;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,20 +12,18 @@ public class ReferenciaController {
 
     private final ReferenciaService service;
     private final QbidEndpointFactory urls;
-    private final SesionCache sesionCache;
+    private final QbidApiSessionProvider sessionProvider;
 
-    public ReferenciaController(ReferenciaService service, QbidEndpointFactory urls, SesionCache sesionCache) {
-        this.service     = service;
-        this.urls        = urls;
-        this.sesionCache = sesionCache;
+    public ReferenciaController(ReferenciaService service,
+                                QbidEndpointFactory urls,
+                                QbidApiSessionProvider sessionProvider) {
+        this.service = service;
+        this.urls = urls;
+        this.sessionProvider = sessionProvider;
     }
 
     private String session(String auth) throws Exception {
-        try {
-            return sesionCache.resolveSession(auth);
-        } catch (SessionExpiredException e) {
-            return sesionCache.renewSession(auth);
-        }
+        return sessionProvider.currentSession();
     }
 
     // â”€â”€ Cuaderno â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

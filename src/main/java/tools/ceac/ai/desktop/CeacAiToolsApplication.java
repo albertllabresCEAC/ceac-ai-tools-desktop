@@ -7,8 +7,8 @@ import tools.ceac.ai.desktop.ui.CeacLauncherWindow;
  * Punto de entrada de la shell desktop de CEAC AI Tools.
  *
  * <p>La shell no es un modulo funcional. Su responsabilidad es abrir la interfaz del producto y
- * orquestar la sesion desktop, los tuneles locales y los modulos {@code outlook}, {@code campus}
- * y {@code qbid}.
+ * orquestar la sesion desktop, los tuneles locales, los tokens locales de API y los modulos
+ * {@code outlook}, {@code campus} y {@code qbid}.
  */
 public final class CeacAiToolsApplication {
 

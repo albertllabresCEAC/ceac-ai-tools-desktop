@@ -61,6 +61,7 @@ Use `run.bat` when you want to:
 - start the Campus module
 - start the QBid module
 - validate the desktop product as an operator
+- validate local Swagger and local API checks with launcher-issued tokens
 
 ### Development mode
 
@@ -109,4 +110,18 @@ Typical cleanup actions:
    - Outlook module on `8080`
    - Campus module on `8081`
    - qBid module on `8082`
-5. verify public MCP metadata through the Cloudflare hostname
+5. verify that local Swagger and `/api` are reachable only on `localhost`
+6. verify public MCP metadata through the Cloudflare hostname
+
+## Local API notes
+
+After desktop login, the launcher mints one local API token per resource and shows it in the
+resource tabs.
+
+Those tokens are intended only for:
+
+- local Swagger
+- local REST checks
+- parser and contract verification on the operator machine
+
+They are not control-plane tokens and they are not valid for the public MCP endpoints.

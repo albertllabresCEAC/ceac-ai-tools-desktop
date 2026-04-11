@@ -7,7 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  * Embedded Spring runtime for Campus MCP inside CEAC AI Tools Desktop.
  *
  * <p>It does not open its own top-level window. The desktop shell retrieves the required
- * components from this context and mounts them inside the {@code Campus MCP} tab.
+ * components from this context and shows them inside the Campus login modal when authentication is
+ * required.
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan

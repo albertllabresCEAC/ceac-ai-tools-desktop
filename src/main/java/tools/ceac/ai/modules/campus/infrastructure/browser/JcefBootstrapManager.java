@@ -12,26 +12,42 @@ import java.io.IOException;
 import java.nio.file.Files;
 
 /**
- * Lazy singleton wrapper around JCEF initialization.
+ * Process-wide singleton wrapper around JCEF initialization.
  */
 @Component
 public class JcefBootstrapManager {
+    private static final Object LOCK = new Object();
+    private static volatile CefApp sharedCefApp;
+
     private final CampusProperties properties;
-    private volatile CefApp cefApp;
 
     public JcefBootstrapManager(CampusProperties properties) {
         this.properties = properties;
     }
 
     public CefApp getApp() {
-        if (cefApp == null) {
-            synchronized (JcefBootstrapManager.class) {
-                if (cefApp == null) {
-                    cefApp = buildApp();
-                }
-            }
+        CefApp app = sharedCefApp;
+        if (app != null) {
+            return app;
         }
-        return cefApp;
+        synchronized (LOCK) {
+            if (sharedCefApp != null) {
+                return sharedCefApp;
+            }
+            CefApp.CefAppState state = CefApp.getState();
+            if (state == CefApp.CefAppState.INITIALIZED || state == CefApp.CefAppState.INITIALIZING) {
+                sharedCefApp = CefApp.getInstance();
+                return sharedCefApp;
+            }
+            if (state == CefApp.CefAppState.SHUTTING_DOWN) {
+                throw new IllegalStateException("jcef_shutting_down");
+            }
+            if (state == CefApp.CefAppState.TERMINATED || state == CefApp.CefAppState.INITIALIZATION_FAILED) {
+                throw new IllegalStateException("jcef_unavailable_after_shutdown");
+            }
+            sharedCefApp = buildApp();
+            return sharedCefApp;
+        }
     }
 
     private CefApp buildApp() {
@@ -41,8 +57,10 @@ public class JcefBootstrapManager {
 
             CefAppBuilder builder = new CefAppBuilder();
             builder.setInstallDir(properties.jcefInstallDir().toFile());
-            builder.setAppHandler(new MavenCefAppHandlerAdapter() {
-            });
+            if (canAttachAppHandler(CefApp.getState())) {
+                builder.setAppHandler(new MavenCefAppHandlerAdapter() {
+                });
+            }
 
             CefSettings settings = builder.getCefSettings();
             settings.windowless_rendering_enabled = false;
@@ -59,6 +77,10 @@ public class JcefBootstrapManager {
         } catch (Exception e) {
             throw new IllegalStateException("cannot_init_jcef", e);
         }
+    }
+
+    private boolean canAttachAppHandler(CefApp.CefAppState state) {
+        return state == CefApp.CefAppState.NONE || state == CefApp.CefAppState.NEW;
     }
 }
 

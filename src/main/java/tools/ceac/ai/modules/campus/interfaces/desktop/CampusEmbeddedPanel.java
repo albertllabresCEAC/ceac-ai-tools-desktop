@@ -9,12 +9,11 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import javax.swing.BorderFactory;
+import javax.swing.DefaultComboBoxModel;
 import javax.swing.DefaultListCellRenderer;
-import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -24,8 +23,8 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import org.cef.CefClient;
 import org.cef.browser.CefBrowser;
 import org.cef.browser.CefFrame;
@@ -51,29 +50,42 @@ import tools.ceac.ai.modules.campus.infrastructure.config.CampusProperties;
 @ConditionalOnExpression("${campus.ui.enabled:true} and !${spring.main.headless:true}")
 public class CampusEmbeddedPanel extends JPanel {
 
+    public interface SessionListener {
+        void onLoginRequired(String message);
+        void onAuthenticationSuccess(String message);
+    }
+
     private static final String CARD_LOGIN = "login";
     private static final String CARD_LOGS = "logs";
     private static final String CARD_CODE = "code";
-    private static final Color MATRIX_BG = Color.BLACK;
-    private static final Color MATRIX_GREEN = new Color(0, 255, 70);
-    private static final Color MATRIX_DIM = new Color(0, 140, 40);
-    private static final Font MATRIX_FONT = new Font("Courier New", Font.PLAIN, 13);
+    private static final String CARD_COOKIES = "cookies";
+    private static final Color SURFACE_SOFT = new Color(231, 236, 245);
+    private static final Color BORDER = new Color(204, 213, 226);
+    private static final Color INK = new Color(15, 23, 42);
+    private static final Color MUTED = new Color(118, 129, 150);
+    private static final Color ACCENT = new Color(47, 107, 255);
+    private static final Color ACCENT_SOFT = new Color(216, 228, 255);
+    private static final Font LABEL_FONT = new Font("Bahnschrift SemiBold", Font.BOLD, 14);
+    private static final Font BODY_FONT = new Font("Segoe UI", Font.PLAIN, 13);
+    private static final Font MONO_FONT = new Font("Consolas", Font.PLAIN, 12);
 
     private final CampusProperties properties;
     private final CampusSessionService sessionService;
     private final CampusUiCoordinator coordinator;
     private final JTextArea outputArea = new JTextArea();
     private final JTextArea codeArea = new JTextArea();
+    private final JTextArea cookiesArea = new JTextArea();
     private final JLabel statusLabel = new JLabel("Estado: esperando login");
     private final java.awt.CardLayout cardLayout = new java.awt.CardLayout();
     private final JPanel centerPanel = new JPanel(cardLayout);
-    private final JPanel toolbarPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 4));
+    private final JPanel toolbarPanel = new JPanel(new BorderLayout(12, 0));
     private final ObjectMapper objectMapper;
     private final int localPort;
     private final CefClient client;
     private final CefBrowser browser;
 
     private volatile boolean authenticated = false;
+    private volatile SessionListener sessionListener;
     private JComboBox<String> viewCombo;
     private JTextField urlField;
 
@@ -93,62 +105,39 @@ public class CampusEmbeddedPanel extends JPanel {
         this.browser = client.createBrowser(properties.baseUrl(), false, false);
         this.coordinator.register(this);
 
-        setBackground(MATRIX_BG);
-        setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        setOpaque(false);
+        setBorder(BorderFactory.createEmptyBorder());
 
-        outputArea.setEditable(false);
-        outputArea.setLineWrap(true);
-        outputArea.setWrapStyleWord(true);
-        outputArea.setBackground(MATRIX_BG);
-        outputArea.setForeground(MATRIX_GREEN);
-        outputArea.setCaretColor(MATRIX_GREEN);
-        outputArea.setFont(MATRIX_FONT);
-        outputArea.setBorder(new EmptyBorder(6, 8, 6, 8));
+        configureConsoleArea(outputArea, true);
+        configureConsoleArea(codeArea, false);
+        configureConsoleArea(cookiesArea, true);
 
-        codeArea.setEditable(false);
-        codeArea.setLineWrap(false);
-        codeArea.setBackground(MATRIX_BG);
-        codeArea.setForeground(MATRIX_GREEN);
-        codeArea.setCaretColor(MATRIX_GREEN);
-        codeArea.setFont(MATRIX_FONT);
-        codeArea.setBorder(new EmptyBorder(6, 8, 6, 8));
+        statusLabel.setForeground(INK);
+        statusLabel.setFont(LABEL_FONT);
+        statusLabel.setBorder(new EmptyBorder(0, 0, 0, 0));
 
-        JLabel apiLabel = new JLabel("API local disponible en http://localhost:" + localPort + "/api");
-        apiLabel.setForeground(MATRIX_DIM);
-        apiLabel.setFont(MATRIX_FONT);
-        apiLabel.setBorder(new EmptyBorder(2, 8, 4, 8));
+        JScrollPane logsScroll = buildScrollPane(outputArea);
+        JScrollPane codeScroll = buildScrollPane(codeArea);
+        JScrollPane cookiesScroll = buildScrollPane(cookiesArea);
 
-        statusLabel.setForeground(MATRIX_GREEN);
-        statusLabel.setFont(MATRIX_FONT.deriveFont(Font.BOLD));
-        statusLabel.setBorder(new EmptyBorder(6, 8, 2, 8));
-
-        JPanel top = new JPanel(new BorderLayout());
-        top.setBackground(MATRIX_BG);
-        top.setBorder(new LineBorder(MATRIX_DIM, 1, false));
-        top.add(statusLabel, BorderLayout.NORTH);
-        top.add(apiLabel, BorderLayout.SOUTH);
-
-        JScrollPane logsScroll = new JScrollPane(outputArea);
-        logsScroll.setBackground(MATRIX_BG);
-        logsScroll.getViewport().setBackground(MATRIX_BG);
-        logsScroll.setBorder(new LineBorder(MATRIX_DIM, 1));
-
-        JScrollPane codeScroll = new JScrollPane(codeArea);
-        codeScroll.setBackground(MATRIX_BG);
-        codeScroll.getViewport().setBackground(MATRIX_BG);
-        codeScroll.setBorder(new LineBorder(MATRIX_DIM, 1));
-
-        centerPanel.setBackground(MATRIX_BG);
+        centerPanel.setOpaque(false);
         centerPanel.add((java.awt.Component) browser.getUIComponent(), CARD_LOGIN);
         centerPanel.add(logsScroll, CARD_LOGS);
         centerPanel.add(codeScroll, CARD_CODE);
+        centerPanel.add(cookiesScroll, CARD_COOKIES);
+
+        JPanel top = new JPanel(new BorderLayout(0, 8));
+        top.setOpaque(false);
+        top.setBorder(new EmptyBorder(0, 0, 10, 0));
+        top.add(statusLabel, BorderLayout.NORTH);
+        top.add(toolbarPanel, BorderLayout.CENTER);
 
         add(top, BorderLayout.NORTH);
         add(centerPanel, BorderLayout.CENTER);
-        add(toolbarPanel, BorderLayout.SOUTH);
 
         buildToolbar();
         registerHandlers();
+        refreshCookiesView();
         statusLabel.setText("Estado: comprobando sesion...");
         cardLayout.show(centerPanel, CARD_LOGIN);
     }
@@ -161,6 +150,10 @@ public class CampusEmbeddedPanel extends JPanel {
         return authenticated && sessionService.isAuthenticated();
     }
 
+    public void setSessionListener(SessionListener sessionListener) {
+        this.sessionListener = sessionListener;
+    }
+
     public void forceLoginMode(String reason) {
         SwingUtilities.invokeLater(() -> showLoginMode(reason));
     }
@@ -168,6 +161,7 @@ public class CampusEmbeddedPanel extends JPanel {
     public void resetSession() {
         authenticated = false;
         sessionService.clearSession();
+        refreshCookiesView();
         forceLoginMode("Sesion reiniciada.");
     }
 
@@ -209,99 +203,31 @@ public class CampusEmbeddedPanel extends JPanel {
     }
 
     private void buildToolbar() {
-        toolbarPanel.setBackground(MATRIX_BG);
-        toolbarPanel.setBorder(new LineBorder(MATRIX_DIM, 1, false));
-        toolbarPanel.setVisible(false);
+        toolbarPanel.setOpaque(false);
 
-        JButton swaggerButton = matrixButton("[ SWAGGER UI ]");
-        swaggerButton.addActionListener(event -> {
-            try {
-                java.awt.Desktop.getDesktop().browse(new URI("http://localhost:" + localPort + "/swagger-ui/index.html"));
-            } catch (Exception ex) {
-                append("Error al abrir Swagger: " + ex.getMessage());
-            }
-        });
-        toolbarPanel.add(swaggerButton);
+        JPanel urlPanel = new JPanel(new BorderLayout(8, 0));
+        urlPanel.setOpaque(false);
+        urlPanel.add(sectionLabel("URL actual"), BorderLayout.WEST);
+        urlField = new JTextField(properties.loginUrl(), 40);
+        urlField.setEditable(false);
+        styleReadonlyField(urlField);
+        urlPanel.add(urlField, BorderLayout.CENTER);
+        toolbarPanel.add(urlPanel, BorderLayout.CENTER);
 
-        if (properties.ui().showLogout()) {
-            JButton logoutButton = matrixButton("[ CERRAR SESION ]");
-            logoutButton.addActionListener(event -> {
-                authenticated = false;
-                sessionService.clearSession();
-                showLoginMode("Sesion cerrada manualmente.");
-            });
-            toolbarPanel.add(logoutButton);
-        }
-
+        viewCombo = new JComboBox<>();
+        DefaultComboBoxModel<String> viewModel = new DefaultComboBoxModel<>(new String[]{"NAVEGADOR", "LOGS", "CODIGO"});
         if (properties.ui().showCookies()) {
-            JButton cookiesButton = matrixButton("[ MOSTRAR COOKIES ]");
-            cookiesButton.addActionListener(event ->
-                    append("--- Cookies ---\n" + sessionService.debugCookies() + "---------------"));
-            toolbarPanel.add(cookiesButton);
+            viewModel.addElement("COOKIES");
         }
+        viewCombo.setModel(viewModel);
+        styleCombo(viewCombo);
+        viewCombo.addActionListener(event -> showSelectedView((String) viewCombo.getSelectedItem()));
 
-        if (properties.ui().showCurrentUrl()) {
-            JLabel urlLabel = new JLabel("URL Actual:");
-            urlLabel.setForeground(MATRIX_DIM);
-            urlLabel.setFont(MATRIX_FONT);
-            urlField = new JTextField(properties.dashboardUrl(), 40);
-            urlField.setEditable(false);
-            urlField.setBackground(MATRIX_BG);
-            urlField.setForeground(MATRIX_GREEN);
-            urlField.setCaretColor(MATRIX_GREEN);
-            urlField.setFont(MATRIX_FONT);
-            urlField.setBorder(new LineBorder(MATRIX_DIM));
-            toolbarPanel.add(urlLabel);
-            toolbarPanel.add(urlField);
-        }
-
-        if (properties.ui().showBrowserView()) {
-            JLabel viewLabel = new JLabel("VISTA:");
-            viewLabel.setForeground(MATRIX_DIM);
-            viewLabel.setFont(MATRIX_FONT);
-
-            viewCombo = new JComboBox<>(new String[]{"LOGS", "NAVEGADOR", "CODIGO"});
-            viewCombo.setBackground(MATRIX_BG);
-            viewCombo.setForeground(MATRIX_GREEN);
-            viewCombo.setFont(MATRIX_FONT);
-            viewCombo.setRenderer(new DefaultListCellRenderer() {
-                @Override
-                public java.awt.Component getListCellRendererComponent(JList<?> list,
-                                                                       Object value,
-                                                                       int index,
-                                                                       boolean isSelected,
-                                                                       boolean cellHasFocus) {
-                    super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                    setBackground(isSelected ? MATRIX_DIM : MATRIX_BG);
-                    setForeground(MATRIX_GREEN);
-                    setFont(MATRIX_FONT);
-                    return this;
-                }
-            });
-            viewCombo.addActionListener(event -> {
-                String selected = (String) viewCombo.getSelectedItem();
-                if ("NAVEGADOR".equals(selected)) {
-                    cardLayout.show(centerPanel, CARD_LOGIN);
-                } else if ("CODIGO".equals(selected)) {
-                    cardLayout.show(centerPanel, CARD_CODE);
-                } else {
-                    cardLayout.show(centerPanel, CARD_LOGS);
-                }
-            });
-            toolbarPanel.add(viewLabel);
-            toolbarPanel.add(viewCombo);
-        }
-    }
-
-    private JButton matrixButton(String text) {
-        JButton button = new JButton(text);
-        button.setBackground(MATRIX_BG);
-        button.setForeground(MATRIX_GREEN);
-        button.setFont(MATRIX_FONT);
-        button.setBorder(new LineBorder(MATRIX_DIM));
-        button.setFocusPainted(false);
-        button.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        return button;
+        JPanel viewPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        viewPanel.setOpaque(false);
+        viewPanel.add(sectionLabel("Vista"));
+        viewPanel.add(viewCombo);
+        toolbarPanel.add(viewPanel, BorderLayout.EAST);
     }
 
     private void registerHandlers() {
@@ -334,6 +260,7 @@ public class CampusEmbeddedPanel extends JPanel {
     private void tryAutoSyncAfterLogin() {
         sessionService.syncFromEmbeddedBrowser();
         boolean hasSession = sessionService.isAuthenticated();
+        refreshCookiesView();
         append("Sincronizacion automatica de cookies.");
         append("Cookie MoodleSession detectada: " + (hasSession ? "SI" : "NO"));
 
@@ -348,25 +275,29 @@ public class CampusEmbeddedPanel extends JPanel {
 
     private void showLoginMode(String message) {
         authenticated = false;
-        toolbarPanel.setVisible(false);
+        refreshCookiesView();
         statusLabel.setText("Estado: login requerido");
         append(message);
+        if (viewCombo != null) {
+            viewCombo.setSelectedItem("NAVEGADOR");
+        }
         cardLayout.show(centerPanel, CARD_LOGIN);
         String currentUrl = browser.getURL();
         if (currentUrl == null || !currentUrl.contains("/login/index.php")) {
             browser.loadURL(properties.loginUrl());
         }
+        notifyLoginRequired(message);
     }
 
     private void showLogsMode(String message) {
         if (viewCombo != null) {
             viewCombo.setSelectedItem("LOGS");
         }
-        toolbarPanel.setVisible(true);
         statusLabel.setText("Estado: autenticado");
         append(message);
         append("Swagger UI: http://localhost:" + localPort + "/swagger-ui/index.html");
         cardLayout.show(centerPanel, CARD_LOGS);
+        notifyAuthenticationSuccess(message);
     }
 
     private String prepareForBrowser(String body) {
@@ -380,7 +311,7 @@ public class CampusEmbeddedPanel extends JPanel {
                         .replace("&", "&amp;")
                         .replace("<", "&lt;")
                         .replace(">", "&gt;");
-                return "<html><body style='background:#111;color:#0f0;font-family:monospace;font-size:13px;padding:12px'>"
+                return "<html><body style='background:#F2F4F8;color:#0F172A;font-family:Consolas,monospace;font-size:13px;padding:12px'>"
                         + "<pre>" + escaped + "</pre></body></html>";
             } catch (Exception ignored) {
             }
@@ -424,6 +355,115 @@ public class CampusEmbeddedPanel extends JPanel {
             outputArea.append(text + System.lineSeparator());
             outputArea.setCaretPosition(outputArea.getDocument().getLength());
         });
+    }
+
+    private void configureConsoleArea(JTextArea area, boolean wrap) {
+        area.setEditable(false);
+        area.setLineWrap(wrap);
+        area.setWrapStyleWord(wrap);
+        area.setBackground(SURFACE_SOFT);
+        area.setForeground(INK);
+        area.setCaretColor(ACCENT);
+        area.setFont(MONO_FONT);
+        area.setBorder(new EmptyBorder(10, 12, 10, 12));
+    }
+
+    private JScrollPane buildScrollPane(JTextArea area) {
+        JScrollPane scroll = new JScrollPane(area);
+        scroll.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER, 1, true),
+                BorderFactory.createEmptyBorder()
+        ));
+        scroll.getViewport().setBackground(SURFACE_SOFT);
+        scroll.setBackground(SURFACE_SOFT);
+        return scroll;
+    }
+
+    private JLabel sectionLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(LABEL_FONT);
+        label.setForeground(MUTED);
+        return label;
+    }
+
+    private void styleReadonlyField(JTextField field) {
+        field.setFont(BODY_FONT);
+        field.setForeground(INK);
+        field.setBackground(SURFACE_SOFT);
+        field.setCaretColor(ACCENT);
+        field.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER, 1, true),
+                new EmptyBorder(8, 10, 8, 10)
+        ));
+    }
+
+    private void styleCombo(JComboBox<String> combo) {
+        combo.setFont(BODY_FONT);
+        combo.setBackground(SURFACE_SOFT);
+        combo.setForeground(INK);
+        combo.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(BORDER, 1, true),
+                new EmptyBorder(3, 6, 3, 6)
+        ));
+        combo.setFocusable(false);
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public java.awt.Component getListCellRendererComponent(JList<?> list,
+                                                                   Object value,
+                                                                   int index,
+                                                                   boolean isSelected,
+                                                                   boolean cellHasFocus) {
+                super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                setBackground(isSelected ? ACCENT_SOFT : Color.WHITE);
+                setForeground(INK);
+                setFont(BODY_FONT);
+                return this;
+            }
+        });
+        UIManager.put("ComboBox.selectionBackground", ACCENT_SOFT);
+        UIManager.put("ComboBox.selectionForeground", INK);
+    }
+
+    private void showSelectedView(String selected) {
+        if ("CODIGO".equals(selected)) {
+            cardLayout.show(centerPanel, CARD_CODE);
+            return;
+        }
+        if ("COOKIES".equals(selected)) {
+            refreshCookiesView();
+            cardLayout.show(centerPanel, CARD_COOKIES);
+            return;
+        }
+        if ("LOGS".equals(selected)) {
+            cardLayout.show(centerPanel, CARD_LOGS);
+            return;
+        }
+        cardLayout.show(centerPanel, CARD_LOGIN);
+    }
+
+    private void refreshCookiesView() {
+        String cookies = sessionService.debugCookies();
+        String content = cookies == null || cookies.isBlank()
+                ? "No hay cookies sincronizadas."
+                : cookies;
+        SwingUtilities.invokeLater(() -> {
+            cookiesArea.setText(content);
+            cookiesArea.setCaretPosition(0);
+        });
+    }
+
+    private void notifyLoginRequired(String message) {
+        SessionListener listener = sessionListener;
+        if (listener != null) {
+            listener.onLoginRequired(message);
+        }
+    }
+
+    private void notifyAuthenticationSuccess(String message) {
+        SessionListener listener = sessionListener;
+        if (listener != null) {
+            listener.onAuthenticationSuccess(message);
+        }
     }
 }
 

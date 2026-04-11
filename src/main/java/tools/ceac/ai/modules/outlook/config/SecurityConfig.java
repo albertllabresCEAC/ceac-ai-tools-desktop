@@ -10,23 +10,19 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.oauth2.core.OAuth2TokenValidator;
-import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtDecoders;
-import org.springframework.security.oauth2.jwt.JwtValidators;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.util.StringUtils;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.ceac.ai.desktop.launcher.LocalApiAccessFilter;
+import tools.ceac.ai.desktop.launcher.LauncherJwtSupport;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +55,7 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable());
         http.cors(Customizer.withDefaults());
         http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+        http.addFilterBefore(new LocalApiAccessFilter(), SecurityContextHolderFilter.class);
 
         String endpoint = mcpUrlService.resolveMcpEndpointPath();
         String scopeAuthority = "SCOPE_" + properties.getAuth().getRequiredScope();
@@ -73,7 +70,10 @@ public class SecurityConfig {
             ).permitAll();
 
             if (properties.getAuth().isEnabled()) {
-                authorize.requestMatchers(endpoint, endpoint + "/**", "/api/outlook/**").hasAuthority(scopeAuthority);
+                authorize.requestMatchers(endpoint, endpoint + "/**", "/api/outlook/**")
+                        .access((authentication, context) -> new org.springframework.security.authorization.AuthorizationDecision(
+                                LauncherJwtSupport.hasResourceAccess(authentication.get(), scopeAuthority)
+                        ));
             } else {
                 authorize.requestMatchers(endpoint, endpoint + "/**", "/api/outlook/**").permitAll();
             }
@@ -145,44 +145,13 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnProperty(prefix = "mcp.remote.auth", name = "enabled", havingValue = "true")
     JwtDecoder jwtDecoder(McpRemoteProperties properties, McpUrlService mcpUrlService) {
-        String issuerUri = properties.getAuth().getIssuerUri();
-        if (!StringUtils.hasText(issuerUri)) {
-            throw new IllegalStateException("mcp.remote.auth.issuer-uri is required when auth is enabled");
-        }
-
-        NimbusJwtDecoder jwtDecoder = buildJwtDecoder(properties);
-        OAuth2TokenValidator<Jwt> validator = new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(issuerUri),
-                audienceValidator(mcpUrlService.resolveRequiredAudience())
+        return LauncherJwtSupport.buildCompositeJwtDecoder(
+                properties.getAuth().getIssuerUri(),
+                properties.getAuth().getJwkSetUri(),
+                mcpUrlService.resolveRequiredAudience(),
+                properties.getLauncher().getIssuerUri(),
+                properties.getLauncher().getSharedSecret()
         );
-        jwtDecoder.setJwtValidator(validator);
-        return jwtDecoder;
-    }
-
-    private NimbusJwtDecoder buildJwtDecoder(McpRemoteProperties properties) {
-        if (StringUtils.hasText(properties.getAuth().getJwkSetUri())) {
-            return NimbusJwtDecoder.withJwkSetUri(properties.getAuth().getJwkSetUri()).build();
-        }
-        JwtDecoder decoder = JwtDecoders.fromIssuerLocation(properties.getAuth().getIssuerUri());
-        if (decoder instanceof NimbusJwtDecoder nimbusJwtDecoder) {
-            return nimbusJwtDecoder;
-        }
-        throw new IllegalStateException("Unable to configure NimbusJwtDecoder for the configured issuer");
-    }
-
-    private OAuth2TokenValidator<Jwt> audienceValidator(String requiredAudience) {
-        return token -> {
-            List<String> audience = token.getAudience();
-            if (audience != null && audience.stream().anyMatch(requiredAudience::equals)) {
-                return OAuth2TokenValidatorResult.success();
-            }
-            OAuth2Error error = new OAuth2Error(
-                    "invalid_token",
-                    "The token audience does not include the required MCP resource: " + requiredAudience,
-                    null
-            );
-            return OAuth2TokenValidatorResult.failure(error);
-        };
     }
 
     private String buildAuthenticateHeader(McpUrlService mcpUrlService,

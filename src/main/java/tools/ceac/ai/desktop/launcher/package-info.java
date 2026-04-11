@@ -6,6 +6,7 @@
  * <ul>
  *   <li>desktop login against the control plane</li>
  *   <li>bootstrap and session handling</li>
+ *   <li>launcher-issued local API tokens for Swagger and localhost REST checks</li>
  *   <li>local tunnel lifecycle</li>
  *   <li>startup and shutdown of embedded resource modules</li>
  *   <li>shared runtime helpers that keep Outlook, Campus and qBid operationally symmetric</li>

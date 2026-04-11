@@ -14,6 +14,7 @@ import tools.ceac.ai.modules.outlook.OutlookMcpRuntimeApplication;
  *   <li>bootstrap comes from the control plane</li>
  *   <li>the launcher starts one local Spring context on the declared port</li>
  *   <li>the runtime becomes ready once OAuth metadata is reachable locally</li>
+ *   <li>the local REST API remains restricted to {@code localhost}</li>
  * </ul>
  */
 public class OutlookRuntimeService extends AbstractManagedSpringRuntimeService {
@@ -24,7 +25,7 @@ public class OutlookRuntimeService extends AbstractManagedSpringRuntimeService {
     /**
      * Starts the Outlook runtime on the local port declared by bootstrap.
      */
-    public void start(BootstrapResponse bootstrap) throws Exception {
+    public void start(BootstrapResponse bootstrap, ControlPlaneSession session) throws Exception {
         if (managedContext != null && managedContext.isActive()) {
             log("outlook", "Reutilizando runtime Outlook ya activo.");
             return;
@@ -42,6 +43,7 @@ public class OutlookRuntimeService extends AbstractManagedSpringRuntimeService {
 
         Map<String, Object> properties = standardRuntimeProperties(
                 bootstrap,
+                session,
                 "ceac-ai-tools-outlook-mcp",
                 false,
                 "ceac-outlook-mcp",

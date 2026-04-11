@@ -1,10 +1,8 @@
 package tools.ceac.ai.modules.qbid.interfaces.api;
 
-import tools.ceac.ai.modules.qbid.domain.exception.SessionExpiredException;
 import tools.ceac.ai.modules.qbid.domain.model.CentroTrabajoDTO;
 import tools.ceac.ai.modules.qbid.domain.model.EmpresaDTO;
 import tools.ceac.ai.modules.qbid.application.service.EmpresaService;
-import tools.ceac.ai.modules.qbid.application.service.SesionCache;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,19 +11,15 @@ import org.springframework.web.bind.annotation.*;
 public class EmpresaController {
 
     private final EmpresaService service;
-    private final SesionCache sesionCache;
+    private final QbidApiSessionProvider sessionProvider;
 
-    public EmpresaController(EmpresaService service, SesionCache sesionCache) {
-        this.service     = service;
-        this.sesionCache = sesionCache;
+    public EmpresaController(EmpresaService service, QbidApiSessionProvider sessionProvider) {
+        this.service = service;
+        this.sessionProvider = sessionProvider;
     }
 
     private String session(String auth) throws Exception {
-        try {
-            return sesionCache.resolveSession(auth);
-        } catch (SessionExpiredException e) {
-            return sesionCache.renewSession(auth);
-        }
+        return sessionProvider.currentSession();
     }
 
     /** Ver datos de la empresa y sus centros de trabajo */

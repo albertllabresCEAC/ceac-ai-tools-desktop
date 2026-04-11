@@ -2,7 +2,7 @@
 
 ## Goal
 
-This document explains how the launcher consumes remote bootstrap and exposes MCP endpoints that can be used by external clients.
+This document explains how the launcher consumes remote bootstrap, exposes public MCP endpoints for external clients and keeps the local REST API restricted to the local machine.
 
 ## Source of truth
 
@@ -16,6 +16,9 @@ The control plane decides:
 - scope
 
 The launcher does not recalculate those values.
+
+The launcher does mint one local API token per resource after desktop login, but those tokens are
+strictly local operational tokens. They are not part of the control-plane bootstrap contract.
 
 ## Minimal bootstrap contract
 
@@ -67,22 +70,33 @@ Each resource returns:
 5. verify `/.well-known/oauth-protected-resource`
 6. use the public URL from ChatGPT, Claude or another MCP client
 
+In parallel, the launcher also prepares:
+
+7. a local-only Swagger URL on `http://localhost:<port>/swagger-ui/index.html`
+8. a local API token valid only for the local REST API of that resource
+
 ## Useful verification endpoints
 
 ### Outlook local
 
 - `http://localhost:8080/.well-known/oauth-protected-resource`
 - `http://localhost:8080/mcp`
+- `http://localhost:8080/swagger-ui/index.html`
+- `http://localhost:8080/api/...` only from the local machine with the launcher-issued local token
 
 ### Campus local
 
 - `http://localhost:8081/.well-known/oauth-protected-resource`
 - `http://localhost:8081/mcp`
+- `http://localhost:8081/swagger-ui/index.html`
+- `http://localhost:8081/api/...` only from the local machine with the launcher-issued local token
 
 ### qBid local
 
 - `http://localhost:8082/.well-known/oauth-protected-resource`
 - `http://localhost:8082/mcp`
+- `http://localhost:8082/swagger-ui/index.html`
+- `http://localhost:8082/api/...` only from the local machine with the launcher-issued local token
 
 ### Public
 
@@ -97,6 +111,20 @@ The URL registered in ChatGPT or Claude must be the MCP endpoint itself:
 - `https://<slug>-qbid-mcp.dartmaker.com/mcp`
 
 Do not register the domain root.
+
+## Local API contract
+
+The local REST API and Swagger are intentionally different from the public MCP contract:
+
+- they bind to `127.0.0.1`
+- they reject forwarded or tunnel-style requests
+- they are intended for operator checks, parser debugging and manual Swagger tests
+- they accept launcher-issued local tokens, not tokens returned by the control plane
+
+This means:
+
+- `MCP` remains the remotely reachable surface
+- `API` and `Swagger` remain local-only operational surfaces
 
 ## Common problems
 
@@ -142,3 +170,11 @@ External MCP login additionally depends on:
 - tunnel pointing to the right local origin
 - correct OAuth metadata
 - correct issuer, audience and scope
+
+### Public MCP works but local API returns `403`
+
+Check:
+
+- the call is really hitting `localhost`
+- no forwarding headers are being injected by a proxy or browser plugin
+- you are using the local token shown in the launcher for that specific resource

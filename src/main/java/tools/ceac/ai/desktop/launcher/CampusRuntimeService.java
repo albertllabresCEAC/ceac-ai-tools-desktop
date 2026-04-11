@@ -7,11 +7,11 @@ import tools.ceac.ai.modules.campus.CeacCampusRuntimeApplication;
 import tools.ceac.ai.modules.campus.interfaces.desktop.CampusEmbeddedPanel;
 
 /**
- * Runs the local Campus runtime as an embedded Spring context and exposes the JCEF panel mounted
- * inside the {@code Campus MCP} tab.
+ * Runs the local Campus runtime as an embedded Spring context and exposes the JCEF panel used by
+ * the launcher login modal.
  *
  * <p>Campus differs from the other modules because it embeds a browser-based login flow. This
- * service therefore owns both runtime lifecycle and the bridge between the launcher tab and the
+ * service therefore owns both runtime lifecycle and the bridge between the launcher shell and the
  * Campus panel.
  */
 public class CampusRuntimeService extends AbstractManagedSpringRuntimeService {
@@ -24,9 +24,9 @@ public class CampusRuntimeService extends AbstractManagedSpringRuntimeService {
     private volatile String swaggerUrl;
 
     /**
-     * Starts the Campus runtime and returns the embeddable JCEF panel used by the launcher tab.
+     * Starts the Campus runtime and returns the embeddable JCEF panel used by the launcher modal.
      */
-    public CampusEmbeddedPanel start(BootstrapResponse bootstrap) throws Exception {
+    public CampusEmbeddedPanel start(BootstrapResponse bootstrap, ControlPlaneSession session) throws Exception {
         if (managedContext != null && managedContext.isActive() && embeddedPanel != null) {
             log("campus", "Reutilizando runtime Campus ya activo.");
             return embeddedPanel;
@@ -45,6 +45,7 @@ public class CampusRuntimeService extends AbstractManagedSpringRuntimeService {
 
         Map<String, Object> properties = standardRuntimeProperties(
                 bootstrap,
+                session,
                 "ceac-ai-tools-campus-mcp",
                 false,
                 "ceac-campus-mcp",

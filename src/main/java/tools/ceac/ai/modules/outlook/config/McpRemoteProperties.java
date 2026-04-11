@@ -25,6 +25,7 @@ public class McpRemoteProperties {
             "https://127.0.0.1:*"
     ));
     private final Auth auth = new Auth();
+    private final Launcher launcher = new Launcher();
 
     public String getPublicBaseUrl() {
         return publicBaseUrl;
@@ -52,6 +53,10 @@ public class McpRemoteProperties {
 
     public Auth getAuth() {
         return auth;
+    }
+
+    public Launcher getLauncher() {
+        return launcher;
     }
 
     public void setAllowedOrigins(String allowedOrigins) {
@@ -145,6 +150,37 @@ public class McpRemoteProperties {
 
         public void setScopesSupported(List<String> scopesSupported) {
             this.scopesSupported = scopesSupported;
+        }
+    }
+
+    public static class Launcher {
+
+        private boolean enabled;
+        private String issuerUri;
+        private String sharedSecret;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public String getIssuerUri() {
+            return issuerUri;
+        }
+
+        public void setIssuerUri(String issuerUri) {
+            this.issuerUri = issuerUri;
+        }
+
+        public String getSharedSecret() {
+            return sharedSecret;
+        }
+
+        public void setSharedSecret(String sharedSecret) {
+            this.sharedSecret = sharedSecret;
         }
     }
 }

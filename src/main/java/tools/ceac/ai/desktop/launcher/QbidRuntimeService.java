@@ -19,7 +19,9 @@ import tools.ceac.ai.modules.qbid.CeacQbidRuntimeApplication;
  * Runs the local qBid runtime as an embedded Spring context.
  *
  * <p>qBid credentials stay local to the machine. The desktop launcher validates them before
- * startup, stores them only in memory and never forwards them to the control plane.
+ * startup, stores them only in memory and never forwards them to the control plane. The local API
+ * remains bound to {@code localhost} and uses launcher-issued local tokens for Swagger and manual
+ * REST checks.
  */
 public class QbidRuntimeService extends AbstractManagedSpringRuntimeService {
 
@@ -88,7 +90,7 @@ public class QbidRuntimeService extends AbstractManagedSpringRuntimeService {
      * Starts qBid on the local port declared by bootstrap and waits until OAuth metadata is
      * reachable.
      */
-    public void start(BootstrapResponse bootstrap, String username, String password) throws Exception {
+    public void start(BootstrapResponse bootstrap, ControlPlaneSession session, String username, String password) throws Exception {
         if (managedContext != null && managedContext.isActive()) {
             log("qbid", "Reutilizando runtime qBid ya activo.");
             return;
@@ -106,6 +108,7 @@ public class QbidRuntimeService extends AbstractManagedSpringRuntimeService {
 
         Map<String, Object> properties = standardRuntimeProperties(
                 bootstrap,
+                session,
                 "ceac-ai-tools-qbid-mcp",
                 true,
                 "ceac-qbid-mcp",

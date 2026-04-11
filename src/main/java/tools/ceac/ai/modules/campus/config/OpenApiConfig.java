@@ -1,8 +1,7 @@
-package tools.ceac.ai.modules.outlook.config;
+package tools.ceac.ai.modules.campus.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
@@ -13,13 +12,12 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     @Bean
-    OpenAPI outlookOpenApi() {
+    OpenAPI campusOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("Outlook Desktop COM API")
-                        .version("v1")
-                        .description("API REST para controlar Outlook Desktop mediante COM")
-                        .contact(new Contact().name("Local user")))
+                        .title("Campus bot API")
+                        .description("API REST y runtime MCP para Campus bot")
+                        .version("1.0.0"))
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth",
                                 new SecurityScheme()
@@ -29,5 +27,3 @@ public class OpenApiConfig {
                 .addSecurityItem(new SecurityRequirement().addList("bearerAuth"));
     }
 }
-
-

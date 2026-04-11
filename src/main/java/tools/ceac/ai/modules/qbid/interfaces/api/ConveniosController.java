@@ -1,9 +1,7 @@
 package tools.ceac.ai.modules.qbid.interfaces.api;
 
-import tools.ceac.ai.modules.qbid.domain.exception.SessionExpiredException;
 import tools.ceac.ai.modules.qbid.domain.model.*;
 import tools.ceac.ai.modules.qbid.application.service.ConveniosService;
-import tools.ceac.ai.modules.qbid.application.service.SesionCache;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,20 +12,16 @@ import java.util.List;
 public class ConveniosController {
 
     private final ConveniosService service;
-    private final SesionCache sesionCache;
+    private final QbidApiSessionProvider sessionProvider;
 
-    public ConveniosController(ConveniosService service, SesionCache sesionCache) {
-        this.service     = service;
-        this.sesionCache = sesionCache;
+    public ConveniosController(ConveniosService service, QbidApiSessionProvider sessionProvider) {
+        this.service = service;
+        this.sessionProvider = sessionProvider;
     }
 
     // â”€â”€ Helper: obtiene sesiÃ³n con auto-renovaciÃ³n si expira â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     private String session(String auth) throws Exception {
-        try {
-            return sesionCache.resolveSession(auth);
-        } catch (SessionExpiredException e) {
-            return sesionCache.renewSession(auth);
-        }
+        return sessionProvider.currentSession();
     }
 
     @GetMapping
