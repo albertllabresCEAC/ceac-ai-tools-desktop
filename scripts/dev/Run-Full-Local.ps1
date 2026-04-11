@@ -110,8 +110,8 @@ function Start-ControlPlaneApplication {
     $command = @(
         "set ""SPRING_PROFILES_ACTIVE=local""",
         "set ""SERVER_PORT=$ServerPort""",
-        "set ""APP_SECURITY_ISSUER_URI=http://localhost:$KeycloakPort/realms/outlookdesktop-mcp""",
-        "set ""APP_SECURITY_JWK_SET_URI=http://localhost:$KeycloakPort/realms/outlookdesktop-mcp/protocol/openid-connect/certs""",
+        "set ""APP_SECURITY_ISSUER_URI=http://localhost:$KeycloakPort/realms/ceac-ia-tools""",
+        "set ""APP_SECURITY_JWK_SET_URI=http://localhost:$KeycloakPort/realms/ceac-ia-tools/protocol/openid-connect/certs""",
         ".\mvnw.cmd -q spring-boot:run"
     ) -join " && "
 
@@ -139,7 +139,7 @@ try {
     }
 
     Start-ControlPlaneDependencies -ProjectRoot $ControlPlaneRoot -KeycloakPort $ControlPlaneKeycloakPort
-    Wait-HttpReady -Url "http://localhost:$ControlPlaneKeycloakPort/realms/outlookdesktop-mcp/.well-known/openid-configuration"
+    Wait-HttpReady -Url "http://localhost:$ControlPlaneKeycloakPort/realms/ceac-ia-tools/.well-known/openid-configuration"
 
     Start-ControlPlaneApplication `
         -ProjectRoot $ControlPlaneRoot `

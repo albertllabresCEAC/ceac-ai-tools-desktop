@@ -19,8 +19,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest(properties = {
         "mcp.remote.public-base-url=https://mcp.example.com",
         "mcp.remote.auth.enabled=true",
-        "mcp.remote.auth.issuer-uri=https://auth.example.com/realms/outlookdesktop-mcp",
-        "mcp.remote.auth.jwk-set-uri=https://auth.example.com/realms/outlookdesktop-mcp/protocol/openid-connect/certs"
+        "mcp.remote.auth.issuer-uri=https://auth.example.com/realms/ceac-ia-tools",
+        "mcp.remote.auth.jwk-set-uri=https://auth.example.com/realms/ceac-ia-tools/protocol/openid-connect/certs"
 })
 @AutoConfigureMockMvc
 class McpSecurityIntegrationTests {
@@ -36,8 +36,8 @@ class McpSecurityIntegrationTests {
         mockMvc.perform(get("/.well-known/oauth-protected-resource"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resource").value("https://mcp.example.com/mcp"))
-                .andExpect(jsonPath("$.authorization_servers", hasItem("https://auth.example.com/realms/outlookdesktop-mcp")))
-                .andExpect(jsonPath("$.scopes_supported", hasItem("mcp:tools")));
+                .andExpect(jsonPath("$.authorization_servers", hasItem("https://auth.example.com/realms/ceac-ia-tools")))
+                .andExpect(jsonPath("$.scopes_supported", hasItem("outlook:tools")));
     }
 
     @Test

@@ -44,8 +44,8 @@ Each resource returns:
 
 - public MCP URL: `https://<slug>-outlook-mcp.dartmaker.com/mcp`
 - local port: `8080`
-- audience: `outlookdesktop-mcp`
-- scope: `mcp:tools`
+- audience: `ceac-ia-tools`
+- scope: `outlook:tools`
 
 ### Campus module
 

@@ -1,5 +1,5 @@
 {
-  "realm": "outlookdesktop-mcp",
+  "realm": "ceac-ia-tools",
   "enabled": true,
   "displayName": "Outlook Desktop MCP",
   "clients": [
@@ -24,13 +24,13 @@
       "defaultClientScopes": [
         "profile",
         "email",
-        "mcp:tools"
+        "outlook:tools"
       ]
     }
   ],
   "clientScopes": [
     {
-      "name": "mcp:tools",
+      "name": "outlook:tools",
       "description": "Scope used to access the Outlook Desktop MCP server",
       "protocol": "openid-connect"
     }

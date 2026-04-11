@@ -23,9 +23,9 @@ class LauncherResourceTokenServiceTest {
                 "user-1",
                 "albert",
                 "albert@test.local",
-                bootstrap("outlook", "outlookdesktop-mcp", "mcp:tools", 8080),
+                bootstrap("outlook", "ceac-ia-tools", "outlook:tools", 8080),
                 List.of(
-                        new ClientMcpResourceResponse("outlook", "Outlook MCP", bootstrap("outlook", "outlookdesktop-mcp", "mcp:tools", 8080), null),
+                        new ClientMcpResourceResponse("outlook", "Outlook MCP", bootstrap("outlook", "ceac-ia-tools", "outlook:tools", 8080), null),
                         new ClientMcpResourceResponse("qbid", "QBid MCP", bootstrap("qbid", "qbid-mcp", "qbid:tools", 8082), null),
                         new ClientMcpResourceResponse("campus", "Campus MCP", bootstrap("campus", "campus-mcp", "campus:tools", 8081), null)
                 )

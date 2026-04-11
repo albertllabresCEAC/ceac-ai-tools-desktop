@@ -31,10 +31,10 @@ mcp:
       issuer-uri: ${MCP_OAUTH_ISSUER_URI:}
       jwk-set-uri: ${MCP_OAUTH_JWK_SET_URI:}
       required-audience: ${MCP_OAUTH_REQUIRED_AUDIENCE:}
-      required-scope: ${MCP_OAUTH_REQUIRED_SCOPE:mcp:tools}
+      required-scope: ${MCP_OAUTH_REQUIRED_SCOPE:outlook:tools}
       resource-name: ${MCP_RESOURCE_NAME:Outlook MCP}
       scopes-supported:
-        - ${MCP_OAUTH_REQUIRED_SCOPE:mcp:tools}
+        - ${MCP_OAUTH_REQUIRED_SCOPE:outlook:tools}
 
 outlook:
   temp-dir: ${java.io.tmpdir}/ceac-ia-tools-outlook-mcp

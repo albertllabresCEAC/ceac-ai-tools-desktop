@@ -282,8 +282,8 @@ That means:
 Typical values:
 
 - Outlook:
-  - audience `outlookdesktop-mcp`
-  - scope `mcp:tools`
+  - audience `ceac-ia-tools`
+  - scope `outlook:tools`
 - Campus:
   - audience `campus-mcp`
   - scope `campus:tools`
