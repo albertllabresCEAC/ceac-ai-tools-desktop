@@ -13,6 +13,9 @@ public record TrelloConnection(
         String fullName,
         String profileUrl
 ) {
+    /**
+     * Returns a compact operator-facing label for the connected Trello account.
+     */
     public String displayName() {
         if (fullName != null && !fullName.isBlank()) {
             if (username != null && !username.isBlank()) {

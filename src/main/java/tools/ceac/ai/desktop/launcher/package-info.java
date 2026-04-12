@@ -9,7 +9,7 @@
  *   <li>launcher-issued local API tokens for Swagger and localhost REST checks</li>
  *   <li>local tunnel lifecycle</li>
  *   <li>startup and shutdown of embedded resource modules</li>
- *   <li>shared runtime helpers that keep Outlook, Campus and qBid operationally symmetric</li>
+ *   <li>shared runtime helpers that keep Outlook, Campus, qBid and Trello operationally symmetric</li>
  * </ul>
  *
  * <p>The launcher package belongs to the desktop shell. It is intentionally separate from

@@ -10,6 +10,9 @@ package tools.ceac.ai.desktop.launcher;
  *   <li>el puerto de metrics reservado para {@code cloudflared}</li>
  *   <li>el puerto local por defecto del runtime asociado</li>
  * </ul>
+ *
+ * <p>Los hostnames publicos no se construyen aqui. El control plane los deriva a partir del slug
+ * basado en el username del operador y del sufijo configurado para cada recurso.
  */
 public enum ManagedMcpKind {
     OUTLOOK("outlook", "Outlook MCP", 20241, 8080),

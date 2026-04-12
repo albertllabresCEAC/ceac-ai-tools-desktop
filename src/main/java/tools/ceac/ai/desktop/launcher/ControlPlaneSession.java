@@ -8,6 +8,10 @@ import java.util.List;
  * <p>The session is global for the desktop shell, but it can carry bootstrap for several MCP
  * resources. In practice the {@code Login} tab fills this structure and the resource tabs read
  * their specific bootstrap and launcher-issued local API tokens from here.
+ *
+ * <p>The resource catalog is immutable for the lifetime of the session. If the control plane adds
+ * a new resource or reprovisions one that was missing, the launcher must perform a new login to
+ * refresh this structure.
  */
 public record ControlPlaneSession(
         String controlPlaneBaseUrl,

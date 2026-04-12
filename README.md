@@ -4,6 +4,10 @@ Windows desktop product for CEAC AI Tools.
 
 The desktop shell authenticates against the central control plane and then orchestrates one local runtime per enabled resource module.
 
+The launcher refreshes the resource catalog only during desktop login. If the control plane enables
+or repairs a resource later, the operator must sign out and sign in again to reload
+`ControlPlaneSession.resources`.
+
 Current product tabs:
 
 - `Login`
@@ -34,6 +38,11 @@ The desktop application now contains two top-level areas:
    - public MCP URL consumed by ChatGPT, Claude and others
 
 All resource modules now live inside the same Maven project and follow the same broad package vocabulary.
+
+Public MCP hostnames use the username-derived slug stored by the control plane, not the mutable
+display name shown in Swing. In production this yields hostnames such as
+`albert-outlook.dartmaker.com`, `albert-campus.dartmaker.com`, `albert-qbid.dartmaker.com` and
+`albert-trello.dartmaker.com`.
 
 The interface convention is consistent across modules:
 
@@ -74,6 +83,7 @@ Internal structure still differs by module because the implementation model is d
 
 - logs in against the control plane
 - receives desktop token plus bootstrap per resource
+- mints one local API token per resource for Swagger and localhost REST checks
 - starts one local `cloudflared` process per resource
 - starts the corresponding local runtime
 - publishes correct OAuth metadata for external MCP clients
@@ -105,6 +115,9 @@ Actions:
 - `Cerrar sesion`
 
 The result of login is a `ControlPlaneSession` that carries bootstrap for every available resource module.
+
+That session is the authoritative resource snapshot for the current launcher run. A newly enabled
+resource does not appear until the next successful login.
 
 ### Outlook bot
 
@@ -155,6 +168,21 @@ It adds one local browser authorization step before startup:
 - Trello redirects to `http://127.0.0.1:43127/trello/callback`
 - the launcher captures and validates the token locally
 - the token stays on the operator machine and never reaches the control plane
+
+Like the other tabs, `Trello bot` depends on the resource list returned by login. If `Trello MCP`
+is missing from `Login -> Recursos`, the tab remains in `pending` until the user logs in again
+against a control plane that already returns that resource.
+
+## Public MCP vs local API
+
+Each resource exposes two different surfaces:
+
+- `MCP`: public hostname behind Cloudflare and central OAuth
+- `API` and `Swagger`: local-only operational surface on `127.0.0.1`
+
+The local surface exists for operator checks, parser verification and manual Swagger tests. It uses
+launcher-issued local tokens and is intentionally different from the public OAuth contract consumed
+by ChatGPT, Claude and similar MCP clients.
 
 ## Requirements
 

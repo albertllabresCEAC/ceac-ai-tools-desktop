@@ -27,6 +27,10 @@ import java.util.concurrent.TimeUnit;
  *
  * <p>Trello returns the token in the URL fragment, so the launcher exposes a small localhost page
  * that captures the fragment in JavaScript and posts it back to a local endpoint.
+ *
+ * <p>The Trello application configuration must allow the localhost callback base
+ * {@code http://127.0.0.1:43127}. The captured token stays on the operator machine and never
+ * travels to the control plane.
  */
 public class TrelloAuthorizationService {
 
@@ -49,6 +53,10 @@ public class TrelloAuthorizationService {
     private String pendingState;
     private CompletableFuture<CapturePayload> pendingCapture;
 
+    /**
+     * Starts one browser authorization round-trip and returns the validated Trello connection bound
+     * to the current desktop session.
+     */
     public TrelloConnection authorize(String apiKey) throws Exception {
         String resolvedApiKey = requireApiKey(apiKey);
         ensureServerStarted();
@@ -89,6 +97,9 @@ public class TrelloAuthorizationService {
         }
     }
 
+    /**
+     * Stops the localhost callback server and cancels any pending browser authorization.
+     */
     public void shutdown() {
         synchronized (lock) {
             if (callbackServer != null) {

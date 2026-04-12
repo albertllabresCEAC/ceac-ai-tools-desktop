@@ -63,6 +63,7 @@ Use `run.bat` when you want to:
 - start the Trello module
 - validate the desktop product as an operator
 - validate local Swagger and local API checks with launcher-issued tokens
+- refresh the launcher resource catalog after a new module was enabled in the control plane
 
 ### Development mode
 
@@ -85,6 +86,18 @@ If that happens:
 - you must first complete the password change through local Keycloak
 
 This behavior is expected and comes from Keycloak.
+
+## Session refresh rules
+
+The launcher does not hot-reload the `resources` catalog after login.
+
+If you change any of these in the control plane:
+
+- enabled resources
+- per-user provisioning state
+- hostname topology of a resource
+
+then the current desktop session must log out and log in again to pick up the new bootstrap list.
 
 ## Cleaning the local environment
 

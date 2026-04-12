@@ -134,6 +134,9 @@ Contains:
 - list of available resource modules
 - launcher signing context for local API tokens
 
+The session resource list is a snapshot taken at login time. If the control plane later enables a
+new resource, the launcher needs a fresh login to reload the catalog.
+
 ### `QbidRuntimeService`
 
 Runs qBid as an embedded Spring context.
@@ -180,6 +183,9 @@ Its output is:
 - bootstrap for `campus`
 - bootstrap for `qbid`
 - bootstrap for `trello`
+
+The login response is the authoritative catalog for the current desktop session. Restarting one
+module does not refresh that catalog; logging in again does.
 
 ### Outlook bot tab
 
@@ -264,6 +270,20 @@ Depends on:
    - the qBid Spring runtime is started
 7. the launcher shows a local API token that is valid only for `localhost`
 
+## Flow: Login -> Trello bot
+
+1. the user logs in
+2. the launcher stores `ControlPlaneSession`
+3. the `Trello bot` tab displays bootstrap data
+4. the user opens `Conectar Trello`
+5. the system browser completes the Trello authorization flow
+6. the launcher captures the Trello token through `http://127.0.0.1:43127/trello/callback`
+7. on start:
+   - prerequisites are validated
+   - `cloudflared` is started
+   - the Trello Spring runtime is started with the launcher-held Trello token
+8. the launcher shows a local API token that is valid only for `localhost`
+
 ## Why the runtimes are separate
 
 Each resource module has:
@@ -296,6 +316,7 @@ Trello follows the same runtime pattern, with one extra local step before startu
 - Cloudflare administrative credentials never reach the desktop
 - qBid credentials never leave the local machine
 - the Trello operator token never reaches the control plane
+- public hostnames use the username-derived slug and omit any `-mcp` suffix in DNS
 - the OAuth issuer announced to external MCP clients must be public, never localhost
 - local REST API, OpenAPI and Swagger are reachable only on `127.0.0.1`
 - local API tokens are minted by the launcher, not by the control plane
@@ -315,4 +336,5 @@ Primary files:
 - [`src/main/java/tools/ceac/ai/modules/outlook/package-info.java`](../src/main/java/tools/ceac/ai/modules/outlook/package-info.java)
 - [`src/main/java/tools/ceac/ai/modules/campus/package-info.java`](../src/main/java/tools/ceac/ai/modules/campus/package-info.java)
 - [`src/main/java/tools/ceac/ai/modules/qbid/package-info.java`](../src/main/java/tools/ceac/ai/modules/qbid/package-info.java)
+- [`src/main/java/tools/ceac/ai/modules/trello/package-info.java`](../src/main/java/tools/ceac/ai/modules/trello/package-info.java)
 

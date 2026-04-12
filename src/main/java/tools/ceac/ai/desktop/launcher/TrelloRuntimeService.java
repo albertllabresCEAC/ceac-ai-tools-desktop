@@ -9,13 +9,19 @@ import tools.ceac.ai.modules.trello.CeacTrelloRuntimeApplication;
  * Runs the local Trello runtime as an embedded Spring context.
  *
  * <p>The Trello user token stays local to the desktop shell. The control plane only provisions the
- * public MCP surface and never sees the Trello account token captured from the browser.
+ * public MCP surface and never sees the Trello account token captured from the browser. Public
+ * hostnames, issuer and scope still come from the control-plane bootstrap exactly like the other
+ * modules.
  */
 public class TrelloRuntimeService extends AbstractManagedSpringRuntimeService {
 
     private volatile ConfigurableApplicationContext managedContext;
     private volatile String swaggerUrl;
 
+    /**
+     * Starts the embedded Trello runtime using the public bootstrap supplied by the control plane
+     * plus the local Trello operator token captured by the launcher.
+     */
     public void start(BootstrapResponse bootstrap, ControlPlaneSession session, String apiKey, TrelloConnection connection)
             throws Exception {
         if (managedContext != null && managedContext.isActive()) {
@@ -71,6 +77,9 @@ public class TrelloRuntimeService extends AbstractManagedSpringRuntimeService {
         }
     }
 
+    /**
+     * Stops the embedded Trello runtime and clears the cached local Swagger URL.
+     */
     public void stop() {
         ConfigurableApplicationContext context = managedContext;
         managedContext = null;
@@ -81,10 +90,16 @@ public class TrelloRuntimeService extends AbstractManagedSpringRuntimeService {
         }
     }
 
+    /**
+     * Returns whether the embedded Trello runtime is currently active.
+     */
     public boolean isRunning() {
         return managedContext != null && managedContext.isActive();
     }
 
+    /**
+     * Returns the local-only Swagger URL of the active Trello runtime.
+     */
     public String getSwaggerUrl() {
         return swaggerUrl;
     }

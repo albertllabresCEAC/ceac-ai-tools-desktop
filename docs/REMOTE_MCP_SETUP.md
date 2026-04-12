@@ -17,6 +17,9 @@ The control plane decides:
 
 The launcher does not recalculate those values.
 
+The public hostname also comes from the control plane. It is based on the username-derived slug of
+the operator, not on the display name shown in the UI.
+
 The launcher does mint one local API token per resource after desktop login, but those tokens are
 strictly local operational tokens. They are not part of the control-plane bootstrap contract.
 
@@ -71,6 +74,10 @@ Each resource returns:
 - audience: `trello-mcp`
 - scope: `trello:tools`
 
+The current DNS pattern intentionally omits any `-mcp` suffix in the hostname. Internal display
+names may still say `Outlook MCP`, `QBid MCP`, `Campus MCP` and `Trello MCP`, but the public DNS
+names stay in the form `username-resource.dartmaker.com`.
+
 ## Actual startup sequence per resource module
 
 1. validate that a desktop session exists
@@ -84,6 +91,9 @@ In parallel, the launcher also prepares:
 
 7. a local-only Swagger URL on `http://localhost:<port>/swagger-ui/index.html`
 8. a local API token valid only for the local REST API of that resource
+
+If the control plane adds a new resource to the catalog, the launcher sees it only after the next
+desktop login because `resources` is refreshed during `POST /api/client/login`.
 
 ## Useful verification endpoints
 
