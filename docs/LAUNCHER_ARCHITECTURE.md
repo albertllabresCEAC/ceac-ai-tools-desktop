@@ -79,6 +79,17 @@ qBid now follows the same broad package vocabulary as Campus:
 - `infrastructure`
 - `interfaces`
 
+### `tools.ceac.ai.modules.trello`
+
+Trello module only.
+
+Trello follows the same broad package vocabulary as the other runtimes:
+
+- `application`
+- `domain`
+- `infrastructure`
+- `interfaces`
+
 The important rule is:
 
 - the shell owns the UI and orchestration
@@ -168,6 +179,7 @@ Its output is:
 - bootstrap for `outlook`
 - bootstrap for `campus`
 - bootstrap for `qbid`
+- bootstrap for `trello`
 
 ### Outlook bot tab
 
@@ -202,6 +214,17 @@ Depends on:
 - qBid bootstrap
 - local `cloudflared`
 - local qBid credentials
+
+### Trello bot tab
+
+Operates the Trello runtime.
+
+Depends on:
+
+- active session
+- Trello bootstrap
+- local `cloudflared`
+- browser-based Trello authorization captured by the launcher
 
 ## Flow: Login -> Outlook bot
 
@@ -254,7 +277,7 @@ Each resource module has:
 
 The launcher therefore models "multiple resource modules under one desktop session", not "one MCP with multiple modes".
 
-The shell now treats all three runtimes through the same high-level pattern:
+The shell now treats all four runtimes through the same high-level pattern:
 
 1. validate prerequisites
 2. start `cloudflared`
@@ -263,11 +286,16 @@ The shell now treats all three runtimes through the same high-level pattern:
 5. expose local-only API and Swagger endpoints on `127.0.0.1`
 6. mint a launcher-issued local API token for Swagger and manual REST checks
 
+Trello follows the same runtime pattern, with one extra local step before startup:
+
+- the launcher captures a Trello operator token through a localhost callback page
+
 ## Security rules
 
 - the launcher only supports `CENTRAL_AUTH`
 - Cloudflare administrative credentials never reach the desktop
 - qBid credentials never leave the local machine
+- the Trello operator token never reaches the control plane
 - the OAuth issuer announced to external MCP clients must be public, never localhost
 - local REST API, OpenAPI and Swagger are reachable only on `127.0.0.1`
 - local API tokens are minted by the launcher, not by the control plane
@@ -282,6 +310,7 @@ Primary files:
 - [`src/main/java/tools/ceac/ai/desktop/launcher/ControlPlaneSession.java`](../src/main/java/tools/ceac/ai/desktop/launcher/ControlPlaneSession.java)
 - [`src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/QbidRuntimeService.java)
 - [`src/main/java/tools/ceac/ai/desktop/launcher/CampusRuntimeService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/CampusRuntimeService.java)
+- [`src/main/java/tools/ceac/ai/desktop/launcher/TrelloRuntimeService.java`](../src/main/java/tools/ceac/ai/desktop/launcher/TrelloRuntimeService.java)
 - [`src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java`](../src/main/java/tools/ceac/ai/desktop/launcher/ManagedMcpKind.java)
 - [`src/main/java/tools/ceac/ai/modules/outlook/package-info.java`](../src/main/java/tools/ceac/ai/modules/outlook/package-info.java)
 - [`src/main/java/tools/ceac/ai/modules/campus/package-info.java`](../src/main/java/tools/ceac/ai/modules/campus/package-info.java)

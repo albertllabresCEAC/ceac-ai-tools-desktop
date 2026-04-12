@@ -19,7 +19,7 @@ class LauncherResourceTokenServiceTest {
         ClientLoginResponse loginResponse = new ClientLoginResponse(
                 "Bearer",
                 "desktop-token",
-                Instant.parse("2026-04-11T12:00:00Z"),
+                Instant.now().plusSeconds(3600),
                 "user-1",
                 "albert",
                 "albert@test.local",
@@ -27,13 +27,14 @@ class LauncherResourceTokenServiceTest {
                 List.of(
                         new ClientMcpResourceResponse("outlook", "Outlook MCP", bootstrap("outlook", "ceac-ia-tools", "outlook:tools", 8080), null),
                         new ClientMcpResourceResponse("qbid", "QBid MCP", bootstrap("qbid", "qbid-mcp", "qbid:tools", 8082), null),
-                        new ClientMcpResourceResponse("campus", "Campus MCP", bootstrap("campus", "campus-mcp", "campus:tools", 8081), null)
+                        new ClientMcpResourceResponse("campus", "Campus MCP", bootstrap("campus", "campus-mcp", "campus:tools", 8081), null),
+                        new ClientMcpResourceResponse("trello", "Trello MCP", bootstrap("trello", "trello-mcp", "trello:tools", 8083), null)
                 )
         );
 
         LauncherSessionResources issued = service.issueSessionResources(loginResponse, loginResponse.resources(), "PC-1", "1.0.0");
 
-        assertEquals(3, issued.resources().size());
+        assertEquals(4, issued.resources().size());
         assertNotEquals(
                 issued.resources().get(0).resourceToken().accessToken(),
                 issued.resources().get(1).resourceToken().accessToken()
@@ -46,6 +47,7 @@ class LauncherResourceTokenServiceTest {
         assertDecodes(issued, issued.resources().get(0));
         assertDecodes(issued, issued.resources().get(1));
         assertDecodes(issued, issued.resources().get(2));
+        assertDecodes(issued, issued.resources().get(3));
     }
 
     private void assertDecodes(LauncherSessionResources issued, ClientMcpResourceResponse resource) {

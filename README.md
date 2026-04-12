@@ -7,9 +7,10 @@ The desktop shell authenticates against the central control plane and then orche
 Current product tabs:
 
 - `Login`
-- `Outlook MCP`
-- `Campus MCP`
-- `QBid MCP`
+- `Outlook bot`
+- `QBid bot`
+- `Campus bot`
+- `Trello bot`
 
 The launcher does not manage Cloudflare, DNS or Keycloak administration directly. Those concerns stay in the control plane.
 
@@ -26,6 +27,7 @@ The desktop application now contains two top-level areas:
    - Outlook via COM
    - Campus via embedded JCEF login plus HTTP session reuse
    - qBid via HTTP scraping
+   - Trello via browser authorization plus REST API
 3. public MCP exposure per resource
    - `cloudflared` per resource
    - OAuth metadata per resource
@@ -64,6 +66,9 @@ Internal structure still differs by module because the implementation model is d
 - `tools.ceac.ai.modules.qbid`
   - qBid resource module
   - `application`, `domain`, `infrastructure`, `interfaces`
+- `tools.ceac.ai.modules.trello`
+  - Trello resource module
+  - `application`, `domain`, `infrastructure`, `interfaces`
 
 ## What the launcher does
 
@@ -101,7 +106,7 @@ Actions:
 
 The result of login is a `ControlPlaneSession` that carries bootstrap for every available resource module.
 
-### Outlook MCP
+### Outlook bot
 
 Shows bootstrap and runtime state for Outlook.
 
@@ -119,36 +124,17 @@ It displays:
 - runtime state
 - Swagger URL
 
-Actions:
+### Campus bot
 
-- `Validar`
-- `Arrancar MCP`
-- `Parar MCP`
-- `Copiar MCP URL`
-- `Abrir Swagger`
-- `Copiar Swagger`
-
-### Campus MCP
-
-Shows bootstrap and runtime state for Campus and embeds the Campus login browser inside the tab.
+Shows bootstrap and runtime state for Campus.
 
 Campus differs from qBid:
 
 - it does not ask for username and password in Swing fields
-- login happens directly inside the embedded JCEF browser
+- login happens only in the browser modal when the session is missing or relaunched
 - Moodle cookies are copied to the Java HTTP client and then reused by REST and MCP
 
-Actions:
-
-- `Validar estado`
-- `Arrancar MCP`
-- `Parar MCP`
-- `Copiar MCP URL`
-- `Abrir Swagger`
-- `Copiar Swagger`
-- `Reiniciar login Campus`
-
-### QBid MCP
+### QBid bot
 
 Shows bootstrap and runtime state for qBid.
 
@@ -157,17 +143,18 @@ It also asks for local qBid credentials:
 - `Usuario qBid`
 - `Password qBid`
 
-Actions:
-
-- `Validar credenciales`
-- `Validar estado`
-- `Arrancar MCP`
-- `Parar MCP`
-- `Copiar MCP URL`
-- `Abrir Swagger`
-- `Copiar Swagger`
-
 Those qBid credentials stay local. They are not sent to the control plane or stored in Keycloak.
+
+### Trello bot
+
+Shows bootstrap and runtime state for Trello.
+
+It adds one local browser authorization step before startup:
+
+- `Conectar Trello` opens the system browser
+- Trello redirects to `http://127.0.0.1:43127/trello/callback`
+- the launcher captures and validates the token locally
+- the token stays on the operator machine and never reaches the control plane
 
 ## Requirements
 
@@ -178,6 +165,7 @@ Those qBid credentials stay local. They are not sent to the control plane or sto
 - Outlook Desktop installed for Outlook MCP
 - access to qBid or sBid for QBid MCP
 - access to `campus.ceacfp.es` for Campus MCP
+- a Trello app key whose callback configuration allows `http://127.0.0.1:43127`
 
 Campus also uses:
 
@@ -250,6 +238,7 @@ $env:CONTROL_PLANE_LOGIN_PASSWORD = "your-password"
 - Outlook local runtime: `8080`
 - Campus local runtime: `8081`
 - qBid local runtime: `8082`
+- Trello local runtime: `8083`
 
 `cloudflared` metrics ports are separate and managed per resource by the launcher.
 
@@ -257,10 +246,10 @@ $env:CONTROL_PLANE_LOGIN_PASSWORD = "your-password"
 
 1. run `run.bat`
 2. authenticate in `Login`
-3. open `Outlook MCP`, `Campus MCP` or `QBid MCP`
-4. validate state if you want a pre-flight check
+3. open `Outlook bot`, `QBid bot`, `Campus bot` or `Trello bot`
+4. for Trello, connect the account first
 5. start the resource
-6. use the public URL `https://<slug>-<resource>-mcp.dartmaker.com/mcp` from ChatGPT, Claude or another MCP client
+6. use the public URL `https://<slug>-<resource>.dartmaker.com/mcp` from ChatGPT, Claude or another MCP client
 
 ## Architecture summary
 
@@ -290,6 +279,9 @@ Typical values:
 - qBid:
   - audience `qbid-mcp`
   - scope `qbid:tools`
+- Trello:
+  - audience `trello-mcp`
+  - scope `trello:tools`
 
 ## Useful local URLs
 
@@ -299,6 +291,8 @@ Typical values:
 - Campus MCP: `http://localhost:8081/mcp`
 - qBid Swagger: `http://localhost:8082/swagger-ui/index.html`
 - qBid MCP: `http://localhost:8082/mcp`
+- Trello Swagger: `http://localhost:8083/swagger-ui/index.html`
+- Trello MCP: `http://localhost:8083/mcp`
 
 ## Generated files and logs
 

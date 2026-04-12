@@ -60,6 +60,7 @@ Use `run.bat` when you want to:
 - start the Outlook module
 - start the Campus module
 - start the QBid module
+- start the Trello module
 - validate the desktop product as an operator
 - validate local Swagger and local API checks with launcher-issued tokens
 
@@ -89,7 +90,7 @@ This behavior is expected and comes from Keycloak.
 
 If you run into stale local state, check:
 
-- ports `8080`, `8081`, `8082`
+- ports `8080`, `8081`, `8082`, `8083`
 - `logs/`
 - `.env.generated`
 - local Docker volumes for Keycloak and PostgreSQL
@@ -110,6 +111,7 @@ Typical cleanup actions:
    - Outlook module on `8080`
    - Campus module on `8081`
    - qBid module on `8082`
+   - Trello module on `8083`
 5. verify that local Swagger and `/api` are reachable only on `localhost`
 6. verify public MCP metadata through the Cloudflare hostname
 

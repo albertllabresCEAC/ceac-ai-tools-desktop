@@ -69,7 +69,7 @@ abstract class AbstractManagedSpringRuntimeService {
         properties.put("spring.ai.mcp.server.name", serverName);
         properties.put("spring.ai.mcp.server.version", "1.0.0");
         properties.put("spring.ai.mcp.server.type", "SYNC");
-        properties.put("spring.ai.mcp.server.protocol", "STREAMABLE");
+        properties.put("spring.ai.mcp.server.protocol", "STATELESS");
         properties.put("spring.ai.mcp.server.instructions", instructions);
         properties.put("spring.ai.mcp.server.streamable-http.mcp-endpoint", "/mcp");
         properties.put("mcp.remote.public-base-url", bootstrap.mcpPublicBaseUrl());

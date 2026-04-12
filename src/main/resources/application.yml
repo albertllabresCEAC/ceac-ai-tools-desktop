@@ -11,7 +11,7 @@ spring:
   ai:
     mcp:
       server:
-        protocol: STREAMABLE
+        protocol: STATELESS
         name: ceac-outlook-mcp
         version: 1.0.0
         instructions: |

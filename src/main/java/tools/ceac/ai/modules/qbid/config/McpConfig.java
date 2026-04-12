@@ -9,9 +9,10 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Registra las tools de qBid en el servidor MCP.
  *
- * <p>El runtime actual usa transporte {@code STREAMABLE HTTP} para alinearse con el resto de
- * CEAC AI Tools y con clientes MCP externos como ChatGPT o Claude. La autoconfiguracion de Spring
- * AI levanta el endpoint usando las properties definidas en {@code application.properties}.
+ * <p>El runtime actual usa transporte {@code STATELESS HTTP} sobre el endpoint MCP comun para
+ * evitar dependencia de sesiones server-side y mejorar la interoperabilidad con clientes MCP
+ * externos como ChatGPT o Claude. La autoconfiguracion de Spring AI levanta el endpoint usando
+ * las properties definidas en {@code application.properties}.
  */
 @Configuration
 public class McpConfig {

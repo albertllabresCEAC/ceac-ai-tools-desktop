@@ -20,6 +20,9 @@ The launcher does not recalculate those values.
 The launcher does mint one local API token per resource after desktop login, but those tokens are
 strictly local operational tokens. They are not part of the control-plane bootstrap contract.
 
+Public MCP exposure is stateless HTTP on `/mcp`. The launcher does not depend on server-side
+session affinity for external MCP clients.
+
 ## Minimal bootstrap contract
 
 Each resource returns:
@@ -42,24 +45,31 @@ Each resource returns:
 
 ### Outlook module
 
-- public MCP URL: `https://<slug>-outlook-mcp.dartmaker.com/mcp`
+- public MCP URL: `https://<slug>-outlook.dartmaker.com/mcp`
 - local port: `8080`
 - audience: `ceac-ia-tools`
 - scope: `outlook:tools`
 
 ### Campus module
 
-- public MCP URL: `https://<slug>-campus-mcp.dartmaker.com/mcp`
+- public MCP URL: `https://<slug>-campus.dartmaker.com/mcp`
 - local port: `8081`
 - audience: `campus-mcp`
 - scope: `campus:tools`
 
 ### qBid module
 
-- public MCP URL: `https://<slug>-qbid-mcp.dartmaker.com/mcp`
+- public MCP URL: `https://<slug>-qbid.dartmaker.com/mcp`
 - local port: `8082`
 - audience: `qbid-mcp`
 - scope: `qbid:tools`
+
+### Trello module
+
+- public MCP URL: `https://<slug>-trello.dartmaker.com/mcp`
+- local port: `8083`
+- audience: `trello-mcp`
+- scope: `trello:tools`
 
 ## Actual startup sequence per resource module
 
@@ -98,19 +108,33 @@ In parallel, the launcher also prepares:
 - `http://localhost:8082/swagger-ui/index.html`
 - `http://localhost:8082/api/...` only from the local machine with the launcher-issued local token
 
+### Trello local
+
+- `http://localhost:8083/.well-known/oauth-protected-resource`
+- `http://localhost:8083/mcp`
+- `http://localhost:8083/swagger-ui/index.html`
+- `http://localhost:8083/api/...` only from the local machine with the launcher-issued local token
+
 ### Public
 
-- `https://<slug>-outlook-mcp.dartmaker.com/.well-known/oauth-protected-resource`
-- `https://<slug>-campus-mcp.dartmaker.com/.well-known/oauth-protected-resource`
-- `https://<slug>-qbid-mcp.dartmaker.com/.well-known/oauth-protected-resource`
+- `https://<slug>-outlook.dartmaker.com/.well-known/oauth-protected-resource`
+- `https://<slug>-campus.dartmaker.com/.well-known/oauth-protected-resource`
+- `https://<slug>-qbid.dartmaker.com/.well-known/oauth-protected-resource`
+- `https://<slug>-trello.dartmaker.com/.well-known/oauth-protected-resource`
 
 The URL registered in ChatGPT or Claude must be the MCP endpoint itself:
 
-- `https://<slug>-outlook-mcp.dartmaker.com/mcp`
-- `https://<slug>-campus-mcp.dartmaker.com/mcp`
-- `https://<slug>-qbid-mcp.dartmaker.com/mcp`
+- `https://<slug>-outlook.dartmaker.com/mcp`
+- `https://<slug>-campus.dartmaker.com/mcp`
+- `https://<slug>-qbid.dartmaker.com/mcp`
+- `https://<slug>-trello.dartmaker.com/mcp`
 
 Do not register the domain root.
+
+Trello-specific note:
+
+- the launcher captures the Trello operator token locally through `http://127.0.0.1:43127/trello/callback`
+- that callback origin must be allowed in the Trello app configuration
 
 ## Local API contract
 

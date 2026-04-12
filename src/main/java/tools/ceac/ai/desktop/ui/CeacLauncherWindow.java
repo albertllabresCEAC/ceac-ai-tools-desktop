@@ -16,6 +16,9 @@ import tools.ceac.ai.desktop.launcher.QbidRuntimeService;
 import tools.ceac.ai.desktop.launcher.RemoteLauncherService;
 import tools.ceac.ai.desktop.launcher.ResourceAccessTokenResponse;
 import tools.ceac.ai.desktop.launcher.RuntimeSettings;
+import tools.ceac.ai.desktop.launcher.TrelloAuthorizationService;
+import tools.ceac.ai.desktop.launcher.TrelloConnection;
+import tools.ceac.ai.desktop.launcher.TrelloRuntimeService;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -97,6 +100,7 @@ public class CeacLauncherWindow {
 
     private static final String DEFAULT_CONTROL_PLANE_URL = "https://control.dartmaker.com";
     private static final String DEFAULT_CLIENT_VERSION = "1.0.0";
+    private static final String DEFAULT_TRELLO_API_KEY = "c0f93f8f62cbcffb3e515327fb293fbf";
     private static final Color BLUE_DARK = new Color(30, 47, 151);
     private static final Color BLUE_MAIN = new Color(47, 107, 255);
     private static final Color CYAN = new Color(0, 209, 255);
@@ -121,6 +125,7 @@ public class CeacLauncherWindow {
     private static final Color OUTLOOK_ACCENT = BLUE_MAIN;
     private static final Color QBID_ACCENT = VIOLET;
     private static final Color CAMPUS_ACCENT = CYAN;
+    private static final Color TRELLO_ACCENT = new Color(0, 121, 191);
     private static final Color LOG_BG = BLACK_SOFT;
     private static final Color LOG_FG = GRAY_LIGHT;
     private static final Color OK = CYAN;
@@ -140,9 +145,12 @@ public class CeacLauncherWindow {
     private final OutlookRuntimeService outlookRuntimeService = new OutlookRuntimeService();
     private final QbidRuntimeService qbidRuntimeService = new QbidRuntimeService();
     private final CampusRuntimeService campusRuntimeService = new CampusRuntimeService();
+    private final TrelloRuntimeService trelloRuntimeService = new TrelloRuntimeService();
+    private final TrelloAuthorizationService trelloAuthorizationService = new TrelloAuthorizationService();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Consumer<String> logConsumer = this::appendLog;
     private final boolean developmentMode = Boolean.parseBoolean(System.getenv().getOrDefault("DARTMAKER_DEV_MODE", "false"));
+    private final String trelloApiKey = System.getenv().getOrDefault("TRELLO_API_KEY", DEFAULT_TRELLO_API_KEY);
 
     private JFrame frame;
     private JTextArea logArea;
@@ -161,6 +169,7 @@ public class CeacLauncherWindow {
     private ResourceWidgets outlookWidgets;
     private ResourceWidgets qbidWidgets;
     private ResourceWidgets campusWidgets;
+    private ResourceWidgets trelloWidgets;
     private JTextField qbidUserField;
     private JPasswordField qbidPasswordField;
     private JDialog campusLoginDialog;
@@ -168,6 +177,7 @@ public class CeacLauncherWindow {
     private Image tabsLogoImage;
 
     private ControlPlaneSession controlPlaneSession;
+    private TrelloConnection trelloConnection;
 
     public void show() {
         GuiLogPublisher.register(logConsumer);
@@ -221,6 +231,7 @@ public class CeacLauncherWindow {
         resetResource(outlookWidgets);
         resetResource(qbidWidgets);
         resetResource(campusWidgets);
+        resetResource(trelloWidgets);
         frame.setMinimumSize(new Dimension(1180, 840));
         frame.setSize(1380, 920);
         frame.setExtendedState(frame.getExtendedState() | JFrame.MAXIMIZED_BOTH);
@@ -248,6 +259,7 @@ public class CeacLauncherWindow {
         tabs.addTab(moduleName(ManagedMcpKind.OUTLOOK), buildResourceTab(ManagedMcpKind.OUTLOOK));
         tabs.addTab(moduleName(ManagedMcpKind.QBID), buildResourceTab(ManagedMcpKind.QBID));
         tabs.addTab(moduleName(ManagedMcpKind.CAMPUS), buildResourceTab(ManagedMcpKind.CAMPUS));
+        tabs.addTab(moduleName(ManagedMcpKind.TRELLO), buildResourceTab(ManagedMcpKind.TRELLO));
         tabs.addChangeListener(event -> handleTabSelection(tabs.getSelectedIndex()));
         SwingUtilities.invokeLater(() -> handleTabSelection(tabs.getSelectedIndex()));
         return tabs;
@@ -366,12 +378,19 @@ public class CeacLauncherWindow {
             grid.add(buildOutlookAccessCard(outlookWidgets));
             grid.add(buildResourceRuntimeCard(outlookWidgets));
             body.add(grid, BorderLayout.CENTER);
-        } else {
+        } else if (kind == ManagedMcpKind.QBID) {
             qbidWidgets = new ResourceWidgets(kind);
             JPanel grid = new JPanel(new GridLayout(1, 2, 12, 12));
             grid.setOpaque(false);
             grid.add(buildQbidAccessCard(qbidWidgets));
             grid.add(buildResourceRuntimeCard(qbidWidgets));
+            body.add(grid, BorderLayout.CENTER);
+        } else {
+            trelloWidgets = new ResourceWidgets(kind);
+            JPanel grid = new JPanel(new GridLayout(1, 2, 12, 12));
+            grid.setOpaque(false);
+            grid.add(buildTrelloAccessCard(trelloWidgets));
+            grid.add(buildResourceRuntimeCard(trelloWidgets));
             body.add(grid, BorderLayout.CENTER);
         }
         panel.add(body, BorderLayout.CENTER);
@@ -448,6 +467,51 @@ public class CeacLauncherWindow {
         return card;
     }
 
+    private JPanel buildTrelloAccessCard(ResourceWidgets widgets) {
+        JPanel card = card("Acceso " + moduleName(widgets.kind), "Operacion local", accentFor(widgets.kind));
+        JPanel body = new JPanel(new BorderLayout(0, 12));
+        body.setOpaque(false);
+        body.add(buildParagraph("Conecta tu cuenta Trello desde el navegador para que el modulo pueda operar tableros, listas y tarjetas con tu usuario.", 300), BorderLayout.NORTH);
+
+        JPanel form = formPanel();
+        widgets.connectionState = valueLabel("Trello: no conectado");
+        widgets.connectedAccount = readonly();
+        addRow(form, 0, "Conexion Trello", widgets.connectionState);
+        addRow(form, 1, "Cuenta", widgets.connectedAccount);
+        body.add(form, BorderLayout.CENTER);
+
+        JPanel footer = new JPanel(new BorderLayout(0, 8));
+        footer.setOpaque(false);
+
+        JPanel actions = new JPanel();
+        actions.setOpaque(false);
+        actions.setLayout(new BoxLayout(actions, BoxLayout.Y_AXIS));
+
+        JPanel connectionButtons = buttonRow();
+        widgets.connect = new JButton("Conectar Trello");
+        widgets.reconnect = new JButton("Reconectar");
+        widgets.disconnect = new JButton("Desconectar");
+        styleSecondaryButton(widgets.connect, accentFor(widgets.kind));
+        styleSecondaryButton(widgets.reconnect, accentFor(widgets.kind));
+        styleNeutralButton(widgets.disconnect);
+        widgets.connect.addActionListener(e -> runAsync(this::connectTrello));
+        widgets.reconnect.addActionListener(e -> runAsync(this::reconnectTrello));
+        widgets.disconnect.addActionListener(e -> runAsync(this::disconnectTrello));
+        connectionButtons.add(widgets.connect);
+        connectionButtons.add(widgets.reconnect);
+        connectionButtons.add(widgets.disconnect);
+        actions.add(connectionButtons);
+        actions.add(Box.createVerticalStrut(8));
+        actions.add(buildModuleControls(widgets, false));
+
+        footer.add(actions, BorderLayout.NORTH);
+        widgets.accessRequirement = accessRequirementLabel(300);
+        footer.add(widgets.accessRequirement, BorderLayout.SOUTH);
+        body.add(footer, BorderLayout.SOUTH);
+        card.add(body, BorderLayout.CENTER);
+        return card;
+    }
+
     private JPanel buildResourceBootstrapCard(ResourceWidgets widgets) {
         JPanel card = card("Bootstrap " + moduleName(widgets.kind), "Datos remotos", accentFor(widgets.kind));
         JPanel form = formPanel();
@@ -512,6 +576,10 @@ public class CeacLauncherWindow {
             case CAMPUS -> {
                 widgets.start.addActionListener(e -> runAsync(this::startCampus));
                 widgets.stop.addActionListener(e -> runAsync(this::stopCampus));
+            }
+            case TRELLO -> {
+                widgets.start.addActionListener(e -> runAsync(this::startTrello));
+                widgets.stop.addActionListener(e -> runAsync(this::stopTrello));
             }
         }
         buttons.add(widgets.start);
@@ -588,11 +656,13 @@ public class CeacLauncherWindow {
             updateAccessRequirement(outlookWidgets);
             updateAccessRequirement(qbidWidgets);
             updateAccessRequirement(campusWidgets);
+            updateAccessRequirement(trelloWidgets);
         });
         appendLog("[launcher] Sesion iniciada contra tunnel." + System.lineSeparator());
         applyResource(outlookWidgets, controlPlaneSession.resourceFor("outlook"));
         applyResource(qbidWidgets, controlPlaneSession.resourceFor("qbid"));
         applyResource(campusWidgets, controlPlaneSession.resourceFor("campus"));
+        applyResource(trelloWidgets, controlPlaneSession.resourceFor("trello"));
     }
 
     private void triggerLogin() {
@@ -621,6 +691,7 @@ public class CeacLauncherWindow {
             case 1 -> refreshPrerequisitesAsync(ManagedMcpKind.OUTLOOK, outlookWidgets);
             case 2 -> refreshPrerequisitesAsync(ManagedMcpKind.QBID, qbidWidgets);
             case 3 -> refreshPrerequisitesAsync(ManagedMcpKind.CAMPUS, campusWidgets);
+            case 4 -> refreshPrerequisitesAsync(ManagedMcpKind.TRELLO, trelloWidgets);
             default -> {
             }
         }
@@ -634,6 +705,15 @@ public class CeacLauncherWindow {
         }
     }
     private void validateCampus() throws Exception { validateResource(ManagedMcpKind.CAMPUS, campusWidgets); }
+    private void validateTrello() throws Exception {
+        validateResource(ManagedMcpKind.TRELLO, trelloWidgets);
+        if (trelloConnection == null || trelloConnection.accessToken() == null || trelloConnection.accessToken().isBlank()) {
+            throw new IllegalStateException("Debes conectar Trello antes de arrancar el modulo.");
+        }
+        if (trelloApiKey == null || trelloApiKey.isBlank()) {
+            throw new IllegalStateException("No hay API key de Trello configurada.");
+        }
+    }
 
     private void validateResource(ManagedMcpKind kind, ResourceWidgets widgets) throws Exception {
         if (controlPlaneSession == null) {
@@ -781,6 +861,66 @@ public class CeacLauncherWindow {
         });
     }
 
+    private void startTrello() throws Exception {
+        BootstrapResponse bootstrap = requireBootstrap(ManagedMcpKind.TRELLO);
+        if (bootstrap.authExposureMode() != AuthExposureMode.CENTRAL_AUTH) {
+            throw new IllegalStateException("Se requiere CENTRAL_AUTH.");
+        }
+        validateTrello();
+        remoteLauncherService.startManagedTunnel(ManagedMcpKind.TRELLO, bootstrap);
+        set(trelloWidgets.tunnel, "Tunnel: activo", OK);
+        set(trelloWidgets.app, "Runtime: arrancando", WARN);
+        trelloRuntimeService.start(bootstrap, controlPlaneSession, trelloApiKey, trelloConnection);
+        set(trelloWidgets.app, "Runtime: activo", OK);
+        setUrl(trelloWidgets.swaggerUrl, trelloRuntimeService.getSwaggerUrl(), true);
+        setPublicUrlActions(trelloWidgets, true);
+        SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+    }
+
+    private void stopTrello() {
+        trelloRuntimeService.stop();
+        remoteLauncherService.stopTunnel(ManagedMcpKind.TRELLO);
+        set(trelloWidgets.tunnel, "Tunnel: detenido", MUTED);
+        set(trelloWidgets.app, "Runtime: detenido", MUTED);
+        setUrl(trelloWidgets.swaggerUrl, null, false);
+        setPublicUrlActions(trelloWidgets, false);
+        SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+    }
+
+    private void connectTrello() throws Exception {
+        if (controlPlaneSession == null) {
+            throw new IllegalStateException("Primero debes iniciar sesion.");
+        }
+        requireBootstrap(ManagedMcpKind.TRELLO);
+        TrelloConnection previous = trelloConnection;
+        SwingUtilities.invokeLater(() -> setTrelloConnectionState("Trello: esperando autorizacion", WARN, previous));
+        try {
+            TrelloConnection connection = trelloAuthorizationService.authorize(trelloApiKey);
+            trelloConnection = connection;
+            appendLog("[launcher] Trello conectado como " + connection.displayName() + "." + System.lineSeparator());
+        } catch (Exception exception) {
+            SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+            throw exception;
+        }
+        SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+    }
+
+    private void reconnectTrello() throws Exception {
+        if (trelloRuntimeService.isRunning()) {
+            stopTrello();
+        }
+        connectTrello();
+    }
+
+    private void disconnectTrello() {
+        if (trelloRuntimeService.isRunning()) {
+            stopTrello();
+        }
+        trelloConnection = null;
+        appendLog("[launcher] Conexion Trello eliminada de la sesion local." + System.lineSeparator());
+        SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+    }
+
     private void applyResource(ResourceWidgets widgets, ClientMcpResourceResponse resource) {
         if (widgets == null) return;
         BootstrapResponse bootstrap = resource == null ? null : resource.bootstrap();
@@ -801,7 +941,11 @@ public class CeacLauncherWindow {
                 widgets.resourceTokenExpiry.setText(value(formatResourceTokenExpiry(resource == null ? null : resource.resourceToken())));
             }
             setPublicUrlActions(widgets, false);
-            if (widgets.start != null) widgets.start.setEnabled(true);
+            if (widgets.kind == ManagedMcpKind.TRELLO) {
+                updateTrelloConnectionUi();
+            } else if (widgets.start != null) {
+                widgets.start.setEnabled(true);
+            }
         });
     }
 
@@ -816,11 +960,14 @@ public class CeacLauncherWindow {
         stopOutlook();
         stopQbid();
         stopCampus();
+        stopTrello();
         controlPlaneSession = null;
+        trelloConnection = null;
         resetLogin();
         resetResource(outlookWidgets);
         resetResource(qbidWidgets);
         resetResource(campusWidgets);
+        resetResource(trelloWidgets);
     }
 
     private void resetLogin() {
@@ -837,6 +984,7 @@ public class CeacLauncherWindow {
         updateAccessRequirement(outlookWidgets);
         updateAccessRequirement(qbidWidgets);
         updateAccessRequirement(campusWidgets);
+        updateAccessRequirement(trelloWidgets);
     }
 
     private void resetResource(ResourceWidgets widgets) {
@@ -857,10 +1005,15 @@ public class CeacLauncherWindow {
         setToken(widgets.resourceToken, null);
         if (widgets.resourceTokenExpiry != null) widgets.resourceTokenExpiry.setText("pending");
         setPublicUrlActions(widgets, false);
+        if (widgets.connectedAccount != null) widgets.connectedAccount.setText("");
+        if (widgets.connectionState != null) set(widgets.connectionState, "Trello: no conectado", MUTED);
         if (widgets.start != null) widgets.start.setEnabled(false);
         if (widgets.stop != null) widgets.stop.setEnabled(false);
         if (widgets.relaunchLogin != null) widgets.relaunchLogin.setEnabled(false);
         updateAccessRequirement(widgets);
+        if (widgets.kind == ManagedMcpKind.TRELLO) {
+            updateTrelloConnectionUi();
+        }
     }
 
     private void loadDefaults() {
@@ -962,6 +1115,8 @@ public class CeacLauncherWindow {
         stopOutlook();
         stopQbid();
         stopCampus();
+        stopTrello();
+        trelloAuthorizationService.shutdown();
         GuiLogPublisher.unregister(logConsumer);
         remoteLauncherService.shutdown();
         executor.shutdownNow();
@@ -1227,11 +1382,58 @@ public class CeacLauncherWindow {
         widgets.accessRequirement.repaint();
     }
 
+    private void updateTrelloConnectionUi() {
+        if (trelloWidgets == null) {
+            return;
+        }
+        boolean sessionReady = controlPlaneSession != null && controlPlaneSession.bootstrapFor(ManagedMcpKind.TRELLO.resourceKey()) != null;
+        boolean connected = trelloConnection != null && trelloConnection.accessToken() != null && !trelloConnection.accessToken().isBlank();
+        boolean running = trelloRuntimeService.isRunning();
+
+        if (!sessionReady) {
+            setTrelloConnectionState("Trello: inicia sesion", MUTED, null);
+        } else if (connected) {
+            setTrelloConnectionState("Trello: conectado", OK, trelloConnection);
+        } else {
+            setTrelloConnectionState("Trello: no conectado", MUTED, null);
+        }
+
+        if (trelloWidgets.connect != null) {
+            trelloWidgets.connect.setEnabled(sessionReady && !connected && !running);
+        }
+        if (trelloWidgets.reconnect != null) {
+            trelloWidgets.reconnect.setEnabled(sessionReady && connected && !running);
+        }
+        if (trelloWidgets.disconnect != null) {
+            trelloWidgets.disconnect.setEnabled(sessionReady && connected && !running);
+        }
+        if (trelloWidgets.start != null) {
+            trelloWidgets.start.setEnabled(sessionReady && connected && !running);
+        }
+        if (trelloWidgets.stop != null) {
+            trelloWidgets.stop.setEnabled(running);
+        }
+    }
+
+    private void setTrelloConnectionState(String status, Color color, TrelloConnection connection) {
+        if (trelloWidgets == null) {
+            return;
+        }
+        if (trelloWidgets.connectionState != null) {
+            set(trelloWidgets.connectionState, status, color);
+        }
+        if (trelloWidgets.connectedAccount != null) {
+            trelloWidgets.connectedAccount.setText(connection == null ? "pending" : connection.displayName());
+            trelloWidgets.connectedAccount.setCaretPosition(0);
+        }
+    }
+
     private Color accentFor(ManagedMcpKind kind) {
         return switch (kind) {
             case OUTLOOK -> OUTLOOK_ACCENT;
             case QBID -> QBID_ACCENT;
             case CAMPUS -> CAMPUS_ACCENT;
+            case TRELLO -> TRELLO_ACCENT;
         };
     }
 
@@ -1240,6 +1442,7 @@ public class CeacLauncherWindow {
             case OUTLOOK -> "Opera Outlook bot con acceso directo a la API, al endpoint MCP y a Swagger";
             case QBID -> "Publica QBid bot y arranca el servicio con las credenciales locales del operador";
             case CAMPUS -> "Gestiona Campus bot y recicla la sesion desde el navegador embebido";
+            case TRELLO -> "Gestiona Trello bot y usa el token local del operador capturado desde navegador";
         };
     }
 
@@ -1248,6 +1451,7 @@ public class CeacLauncherWindow {
             case OUTLOOK -> "Este panel concentra bootstrap, prerequisitos y ciclo de vida del servicio de Outlook bot para comprobar la publicacion remota sin salir de la shell.";
             case QBID -> "QBid bot necesita credenciales locales para arrancar. El estado expone las rutas importantes y evita validaciones manuales redundantes.";
             case CAMPUS -> "Campus bot combina estado operativo con una cabina JCEF embebida para reutilizar la sesion del login y reducir friccion durante las pruebas.";
+            case TRELLO -> "Trello bot captura la autorizacion del usuario desde el navegador y publica tools locales para tableros, listas y tarjetas.";
         };
     }
 
@@ -1256,6 +1460,7 @@ public class CeacLauncherWindow {
             case OUTLOOK -> "Outlook bot";
             case QBID -> "QBid bot";
             case CAMPUS -> "Campus bot";
+            case TRELLO -> "Trello bot";
         };
     }
 
@@ -1521,6 +1726,11 @@ public class CeacLauncherWindow {
         private JButton stop;
         private JButton relaunchLogin;
         private JLabel accessRequirement;
+        private JLabel connectionState;
+        private JTextField connectedAccount;
+        private JButton connect;
+        private JButton reconnect;
+        private JButton disconnect;
 
         private ResourceWidgets(ManagedMcpKind kind) { this.kind = kind; }
     }
