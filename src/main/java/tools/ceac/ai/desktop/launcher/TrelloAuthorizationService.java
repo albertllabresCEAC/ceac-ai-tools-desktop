@@ -82,7 +82,7 @@ public class TrelloAuthorizationService {
             if (payload.token() == null || payload.token().isBlank()) {
                 throw new IllegalStateException("No he recibido un token de Trello en el callback local.");
             }
-            return fetchCurrentMember(resolvedApiKey, payload.token());
+            return resolveConnection(resolvedApiKey, payload.token());
         } catch (ExecutionException exception) {
             Throwable cause = exception.getCause() == null ? exception : exception.getCause();
             if (cause instanceof Exception wrapped) {
@@ -94,6 +94,39 @@ public class TrelloAuthorizationService {
                 pendingState = null;
                 pendingCapture = null;
             }
+        }
+    }
+
+    /**
+     * Validates an existing Trello token and rebuilds the current member connection metadata.
+     */
+    public TrelloConnection resolveConnection(String apiKey, String accessToken) throws IOException, InterruptedException {
+        return fetchCurrentMember(requireApiKey(apiKey), requireAccessToken(accessToken));
+    }
+
+    /**
+     * Revokes an existing Trello token. Tokens that are already expired or unknown are treated as
+     * already disconnected.
+     */
+    public void revoke(String apiKey, String accessToken) throws IOException, InterruptedException {
+        String resolvedApiKey = requireApiKey(apiKey);
+        String resolvedAccessToken = requireAccessToken(accessToken);
+        URI uri = URI.create(API_BASE_URL + "/tokens/"
+                + encode(resolvedAccessToken)
+                + "?key=" + encode(resolvedApiKey)
+                + "&token=" + encode(resolvedAccessToken));
+        HttpResponse<String> response = httpClient.send(
+                HttpRequest.newBuilder(uri)
+                        .timeout(Duration.ofSeconds(20))
+                        .DELETE()
+                        .build(),
+                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+        );
+        if (response.statusCode() == 401 || response.statusCode() == 404) {
+            return;
+        }
+        if (response.statusCode() >= 400) {
+            throw new IOException("Trello no ha podido revocar el token con HTTP " + response.statusCode() + ".");
         }
     }
 
@@ -233,7 +266,7 @@ public class TrelloAuthorizationService {
                 + "?key=" + encode(apiKey)
                 + "&name=" + encode("CEAC AI Tools")
                 + "&scope=" + encode("read,write")
-                + "&expiration=" + encode("30days")
+                + "&expiration=" + encode("never")
                 + "&response_type=token"
                 + "&callback_method=fragment"
                 + "&return_url=" + encode(returnUrl);
@@ -251,6 +284,13 @@ public class TrelloAuthorizationService {
             throw new IllegalStateException("No hay API key de Trello configurada.");
         }
         return apiKey.trim();
+    }
+
+    private String requireAccessToken(String accessToken) {
+        if (accessToken == null || accessToken.isBlank()) {
+            throw new IllegalStateException("No hay token Trello disponible.");
+        }
+        return accessToken.trim();
     }
 
     private static String encode(String value) {

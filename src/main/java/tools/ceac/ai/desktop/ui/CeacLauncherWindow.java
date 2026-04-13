@@ -18,6 +18,7 @@ import tools.ceac.ai.desktop.launcher.ResourceAccessTokenResponse;
 import tools.ceac.ai.desktop.launcher.RuntimeSettings;
 import tools.ceac.ai.desktop.launcher.TrelloAuthorizationService;
 import tools.ceac.ai.desktop.launcher.TrelloConnection;
+import tools.ceac.ai.desktop.launcher.TrelloLocalTokenStore;
 import tools.ceac.ai.desktop.launcher.TrelloRuntimeService;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -147,6 +148,7 @@ public class CeacLauncherWindow {
     private final CampusRuntimeService campusRuntimeService = new CampusRuntimeService();
     private final TrelloRuntimeService trelloRuntimeService = new TrelloRuntimeService();
     private final TrelloAuthorizationService trelloAuthorizationService = new TrelloAuthorizationService();
+    private final TrelloLocalTokenStore trelloLocalTokenStore = new TrelloLocalTokenStore();
     private final ExecutorService executor = Executors.newCachedThreadPool();
     private final Consumer<String> logConsumer = this::appendLog;
     private final boolean developmentMode = Boolean.parseBoolean(System.getenv().getOrDefault("DARTMAKER_DEV_MODE", "false"));
@@ -663,6 +665,7 @@ public class CeacLauncherWindow {
         applyResource(qbidWidgets, controlPlaneSession.resourceFor("qbid"));
         applyResource(campusWidgets, controlPlaneSession.resourceFor("campus"));
         applyResource(trelloWidgets, controlPlaneSession.resourceFor("trello"));
+        restorePersistedTrelloConnection();
     }
 
     private void triggerLogin() {
@@ -897,6 +900,7 @@ public class CeacLauncherWindow {
         try {
             TrelloConnection connection = trelloAuthorizationService.authorize(trelloApiKey);
             trelloConnection = connection;
+            persistTrelloConnection(connection);
             appendLog("[launcher] Trello conectado como " + connection.displayName() + "." + System.lineSeparator());
         } catch (Exception exception) {
             SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
@@ -913,12 +917,33 @@ public class CeacLauncherWindow {
     }
 
     private void disconnectTrello() {
+        TrelloConnection previousConnection = trelloConnection;
         if (trelloRuntimeService.isRunning()) {
             stopTrello();
         }
         trelloConnection = null;
-        appendLog("[launcher] Conexion Trello eliminada de la sesion local." + System.lineSeparator());
+        clearPersistedTrelloConnection();
+        Exception revokeFailure = null;
+        if (previousConnection != null
+                && previousConnection.accessToken() != null
+                && !previousConnection.accessToken().isBlank()
+                && trelloApiKey != null
+                && !trelloApiKey.isBlank()) {
+            try {
+                trelloAuthorizationService.revoke(trelloApiKey, previousConnection.accessToken());
+            } catch (Exception exception) {
+                revokeFailure = exception;
+            }
+        }
+        appendLog("[launcher] Conexion Trello eliminada del equipo local." + System.lineSeparator());
         SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+        if (revokeFailure != null) {
+            throw new IllegalStateException(
+                    "La conexion local se ha eliminado, pero no he podido revocar el token en Trello: "
+                            + revokeFailure.getMessage(),
+                    revokeFailure
+            );
+        }
     }
 
     private void applyResource(ResourceWidgets widgets, ClientMcpResourceResponse resource) {
@@ -968,6 +993,60 @@ public class CeacLauncherWindow {
         resetResource(qbidWidgets);
         resetResource(campusWidgets);
         resetResource(trelloWidgets);
+    }
+
+    private void restorePersistedTrelloConnection() {
+        if (controlPlaneSession == null || controlPlaneSession.bootstrapFor(ManagedMcpKind.TRELLO.resourceKey()) == null) {
+            return;
+        }
+
+        String storedToken;
+        try {
+            storedToken = trelloLocalTokenStore.loadAccessToken().orElse(null);
+        } catch (Exception exception) {
+            appendLog("[launcher] No he podido leer la conexion Trello guardada: "
+                    + exception.getMessage() + System.lineSeparator());
+            SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+            return;
+        }
+
+        if (storedToken == null || storedToken.isBlank()) {
+            SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> setTrelloConnectionState("Trello: restaurando conexion", WARN, null));
+        try {
+            TrelloConnection restoredConnection = trelloAuthorizationService.resolveConnection(trelloApiKey, storedToken);
+            trelloConnection = restoredConnection;
+            persistTrelloConnection(restoredConnection);
+            appendLog("[launcher] Conexion Trello restaurada para "
+                    + restoredConnection.displayName() + "." + System.lineSeparator());
+        } catch (Exception exception) {
+            trelloConnection = null;
+            clearPersistedTrelloConnection();
+            appendLog("[launcher] La conexion Trello guardada ya no es valida y se ha eliminado."
+                    + System.lineSeparator());
+        }
+        SwingUtilities.invokeLater(this::updateTrelloConnectionUi);
+    }
+
+    private void persistTrelloConnection(TrelloConnection connection) {
+        try {
+            trelloLocalTokenStore.saveAccessToken(connection.accessToken());
+        } catch (Exception exception) {
+            appendLog("[launcher] AVISO: Trello conectado, pero no he podido persistir el token localmente: "
+                    + exception.getMessage() + System.lineSeparator());
+        }
+    }
+
+    private void clearPersistedTrelloConnection() {
+        try {
+            trelloLocalTokenStore.clear();
+        } catch (Exception exception) {
+            appendLog("[launcher] AVISO: No he podido limpiar el token Trello local: "
+                    + exception.getMessage() + System.lineSeparator());
+        }
     }
 
     private void resetLogin() {

@@ -4,17 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record TrelloCardSummary(
+public record TrelloChecklistSummary(
         String id,
         String idBoard,
-        String idList,
+        String idCard,
         String name,
-        String desc,
-        String url,
-        boolean closed,
-        String due,
-        Boolean dueComplete,
         Double pos,
-        List<String> idMembers
+        List<TrelloCheckItemSummary> checkItems
 ) {
 }

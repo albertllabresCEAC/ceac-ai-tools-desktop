@@ -168,10 +168,63 @@ It adds one local browser authorization step before startup:
 - Trello redirects to `http://127.0.0.1:43127/trello/callback`
 - the launcher captures and validates the token locally
 - the token stays on the operator machine and never reaches the control plane
+- the token is persisted locally for the current Windows user, so the operator does not need to
+  re-authorize on every desktop login
+- `Desconectar` removes the local token and also attempts to revoke it in Trello
 
 Like the other tabs, `Trello bot` depends on the resource list returned by login. If `Trello MCP`
 is missing from `Login -> Recursos`, the tab remains in `pending` until the user logs in again
 against a control plane that already returns that resource.
+
+### Trello wrapper contract
+
+The Trello runtime exposes a local REST API and MCP tools that wrap part of the Trello REST API.
+
+Important wrapper semantics:
+
+- fields that are omitted from a JSON request are deserialized as `null`
+- for partial update requests, `null` means "leave unchanged"
+- an empty string is not a no-op
+- for `name`, `description` and `due`, an empty string is forwarded to Trello and may clear data
+  or trigger Trello-side validation
+- blank values for some routing fields such as `position`, `listId` or `checklistId` may be
+  ignored by the wrapper instead of forwarded
+
+This means that these values are intentionally different:
+
+- omitted field: no change
+- `null`: no change
+- `""`: explicit value, not "leave unchanged"
+
+#### Trello card state semantics
+
+For cards, these actions are different and must not be confused:
+
+- `closed=true`: archives the card
+- `dueComplete=true`: marks the due date as completed without archiving the card
+- moving a card to a list such as `Done` or `Finalizada`: only changes the list, it does not imply
+  `closed=true` and does not imply `dueComplete=true`
+
+If the intent is to move a card between lists, prefer the explicit move operation over a generic
+card update carrying `listId`.
+
+#### Trello field formats
+
+Expected field formats in the wrapper:
+
+- `due`: Trello-compatible datetime, usually ISO-8601 such as
+  `2026-05-02T10:30:00.000Z`
+- `position`: values such as `top`, `bottom` or a numeric string accepted by Trello
+
+#### Destructive operations
+
+The following operations are destructive and should be treated accordingly in tests and operator
+flows:
+
+- delete card
+- delete checklist
+- delete checklist item
+- archive card via `closed=true`
 
 ## Public MCP vs local API
 
