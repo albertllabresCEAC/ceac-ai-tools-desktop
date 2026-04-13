@@ -140,3 +140,23 @@ Those tokens are intended only for:
 - parser and contract verification on the operator machine
 
 They are not control-plane tokens and they are not valid for the public MCP endpoints.
+
+### Outlook API notes
+
+Recent Outlook listing/detail changes are intentionally biased toward practical local verification:
+
+- `GET /api/outlook/messages` defaults to `limit=20`, `unreadOnly=false`, `sortOrder=desc`
+- when `since` is omitted, Outlook listing defaults to the last 7 days
+- listing now includes `body`, `attachments`, `to`, `cc` and `bcc`
+- the listing path uses Outlook `Table` for ordering and row selection, then opens only the
+  selected `MailItem` entries for enrichment
+- detail lookup caches `storeId` by `entryId` so opening a message after listing is faster than a
+  cold lookup across all stores
+
+If an Outlook performance regression appears again, first verify whether the slow path is coming
+from:
+
+- store-wide `GetItemFromID` scans
+- attachment enumeration
+- recipient expansion through `Recipients`
+- body generation through `Body` / `HTMLBody` instead of `PropertyAccessor`

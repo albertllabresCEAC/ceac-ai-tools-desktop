@@ -19,28 +19,34 @@ import com.jacob.activeX.ActiveXComponent;
 import com.jacob.com.ComFailException;
 import com.jacob.com.Dispatch;
 import com.jacob.com.Variant;
+import org.jsoup.Jsoup;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.text.DateFormat;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * COM-backed implementation of the Outlook gateway.
@@ -52,6 +58,25 @@ import java.util.Objects;
 public class OutlookComGateway implements OutlookGateway {
 
     private static final int OL_MAIL_ITEM = 0;
+    private static final int DEFAULT_LOOKBACK_DAYS = 7;
+    private static final String MAPI_BODY_PROPERTY = "http://schemas.microsoft.com/mapi/proptag/0x1000001F";
+    private static final String MAPI_BODY_PROPERTY_STRING8 = "http://schemas.microsoft.com/mapi/proptag/0x1000001E";
+    private static final String MAPI_HTML_PROPERTY = "http://schemas.microsoft.com/mapi/proptag/0x1013001F";
+    private static final String MAPI_HTML_PROPERTY_STRING8 = "http://schemas.microsoft.com/mapi/proptag/0x1013001E";
+    private static final String MAPI_HAS_ATTACH_PROPERTY = "http://schemas.microsoft.com/mapi/proptag/0x0E1B000B";
+    private static final String MAPI_RECEIVED_TIME_FILTER_PROPERTY =
+            "https://schemas.microsoft.com/mapi/proptag/0x0E060040";
+    private static final String MAPI_READ_FILTER_PROPERTY =
+            "https://schemas.microsoft.com/mapi/proptag/0x0E69000B";
+    private static final List<String> TABLE_COLUMNS = List.of(
+            "EntryID",
+            "Subject",
+            "SenderName",
+            "SenderEmailAddress",
+            "ReceivedTime",
+            "UnRead",
+            "Size"
+    );
     private static final List<DateTimeFormatter> OUTLOOK_DATE_FORMATS = List.of(
             DateTimeFormatter.ofPattern("M/d/yyyy h:mm:ss a", Locale.US),
             DateTimeFormatter.ofPattern("M/d/yyyy h:mm a", Locale.US),
@@ -65,6 +90,7 @@ public class OutlookComGateway implements OutlookGateway {
 
     private final OutlookProperties properties;
     private final JacobLibraryService jacobLibraryService;
+    private final Map<String, String> storeIdByEntryId = new ConcurrentHashMap<>();
 
     public OutlookComGateway(OutlookProperties properties, JacobLibraryService jacobLibraryService) {
         this.properties = properties;
@@ -75,27 +101,18 @@ public class OutlookComGateway implements OutlookGateway {
         int limit = query.getLimit() != null ? query.getLimit() : properties.getDefaultPageSize();
         return withNamespace(namespace -> {
             Dispatch folder = getDefaultFolder(namespace, query.getFolder());
-            Dispatch items = Dispatch.get(folder, "Items").toDispatch();
-            List<MailMessage> result = new ArrayList<>();
-            int count = Dispatch.get(items, "Count").getInt();
-            for (int i = count; i >= 1 && result.size() < limit; i--) {
-                Dispatch item = Dispatch.call(items, "Item", new Variant(i)).toDispatch();
-                if (!"IPM.Note".equalsIgnoreCase(safeString(item, "MessageClass"))) {
-                    continue;
-                }
-                if (query.isUnreadOnly() && !Dispatch.get(item, "UnRead").getBoolean()) {
-                    continue;
-                }
-                result.add(toMailMessage(item));
+            boolean descending = isDescendingSort(query);
+            OffsetDateTime since = effectiveSince(query);
+            try {
+                return listMessagesWithTable(namespace, folder, limit, since, query.isUnreadOnly(), descending);
+            } catch (Exception ex) {
+                return listMessagesWithItems(folder, limit, since, query.isUnreadOnly(), descending);
             }
-            result.sort(Comparator.comparing(MailMessage::receivedAt,
-                    Comparator.nullsLast(Comparator.reverseOrder())));
-            return result;
         });
     }
 
     public MailMessage getMessage(String entryId) {
-        return withNamespace(namespace -> toMailMessage(getItemFromId(namespace, entryId)));
+        return withNamespace(namespace -> toFullMailMessage(getItemFromId(namespace, entryId)));
     }
 
     public List<AttachmentInfo> listAttachments(String entryId) {
@@ -268,8 +285,41 @@ public class OutlookComGateway implements OutlookGateway {
         if (!StringUtils.hasText(entryId)) {
             throw new OutlookComException("entryId is required");
         }
+        List<String> candidates = new ArrayList<>();
+        String cachedStoreId = storeIdByEntryId.get(entryId);
+        if (StringUtils.hasText(cachedStoreId)) {
+            candidates.add(cachedStoreId);
+        }
+        for (String storeId : resolveStoreIds(namespace)) {
+            if (!candidates.contains(storeId)) {
+                candidates.add(storeId);
+            }
+        }
+        return getItemFromId(namespace, entryId, candidates);
+    }
+
+    private Dispatch getItemFromId(Dispatch namespace, String entryId, List<String> storeIds) {
+        if (!StringUtils.hasText(entryId)) {
+            throw new OutlookComException("entryId is required");
+        }
+        for (String storeId : storeIds) {
+            if (!StringUtils.hasText(storeId)) {
+                continue;
+            }
+            try {
+                Dispatch item = Dispatch.call(namespace, "GetItemFromID", entryId, storeId).toDispatch();
+                storeIdByEntryId.put(entryId, storeId);
+                return item;
+            } catch (ComFailException ignored) {
+            }
+        }
         try {
-            return Dispatch.call(namespace, "GetItemFromID", entryId).toDispatch();
+            Dispatch item = Dispatch.call(namespace, "GetItemFromID", entryId).toDispatch();
+            String resolvedStoreId = resolveStoreIdFromItem(item);
+            if (StringUtils.hasText(resolvedStoreId)) {
+                storeIdByEntryId.put(entryId, resolvedStoreId);
+            }
+            return item;
         } catch (ComFailException ex) {
             throw new OutlookComException("No se pudo recuperar el elemento de Outlook con entryId=" + entryId, ex);
         }
@@ -318,6 +368,52 @@ public class OutlookComGateway implements OutlookGateway {
         );
     }
 
+    private MailMessage toFullMailMessage(Dispatch item) {
+        ensureMailItem(item);
+        String plainBody = readBodyText(item);
+        String htmlBody = readHtmlBody(item);
+        return new MailMessage(
+                safeString(item, "EntryID"),
+                safeString(item, "Subject"),
+                safeString(item, "SenderName"),
+                readSenderEmail(item),
+                readRecipients(item, 1),
+                readRecipients(item, 2),
+                readRecipients(item, 3),
+                plainBody,
+                htmlBody,
+                safeBoolean(item, "UnRead"),
+                safeDate(item, "ReceivedTime"),
+                safeDate(item, "SentOn"),
+                hasAttachments(item) ? readAttachments(item) : List.of()
+        );
+    }
+
+    private MailMessage toMailMessageSummary(
+            Dispatch row,
+            String to,
+            String cc,
+            String bcc,
+            String body,
+            List<AttachmentInfo> attachments
+    ) {
+        return new MailMessage(
+                safeRowString(row, "EntryID"),
+                safeRowString(row, "Subject"),
+                safeRowString(row, "SenderName"),
+                safeRowString(row, "SenderEmailAddress"),
+                to,
+                cc,
+                bcc,
+                body,
+                null,
+                safeRowBoolean(row, "UnRead"),
+                safeRowDate(row, "ReceivedTime"),
+                null,
+                attachments
+        );
+    }
+
     private String readSenderEmail(Dispatch item) {
         try {
             String emailType = safeString(item, "SenderEmailType");
@@ -345,6 +441,15 @@ public class OutlookComGateway implements OutlookGateway {
     }
 
     private String readRecipients(Dispatch item, int recipientType) {
+        String directRecipients = switch (recipientType) {
+            case 1 -> safeStringOrNull(item, "To");
+            case 2 -> safeStringOrNull(item, "CC");
+            case 3 -> safeStringOrNull(item, "BCC");
+            default -> null;
+        };
+        if (StringUtils.hasText(directRecipients)) {
+            return directRecipients;
+        }
         try {
             Dispatch recipients = Dispatch.get(item, "Recipients").toDispatch();
             int count = Dispatch.get(recipients, "Count").getInt();
@@ -455,6 +560,15 @@ public class OutlookComGateway implements OutlookGateway {
             return variant == null || variant.isNull() ? null : variant.toString();
         } catch (Exception ex) {
             throw new OutlookComException("No se pudo leer la propiedad de Outlook: " + property, ex);
+        }
+    }
+
+    private String safeStringOrNull(Dispatch dispatch, String property) {
+        try {
+            Variant variant = Dispatch.get(dispatch, property);
+            return variant == null || variant.isNull() ? null : variant.toString();
+        } catch (Exception ignored) {
+            return null;
         }
     }
 
@@ -584,6 +698,342 @@ public class OutlookComGateway implements OutlookGateway {
         }
         if (value instanceof LocalDateTime localDateTime) {
             return localDateTime.atZone(ZoneId.systemDefault()).toOffsetDateTime();
+        }
+        return null;
+    }
+
+    private List<MailMessage> listMessagesWithTable(
+            Dispatch namespace,
+            Dispatch folder,
+            int limit,
+            OffsetDateTime since,
+            boolean unreadOnly,
+            boolean descending
+    ) {
+        Dispatch table = Dispatch.call(folder, "GetTable").toDispatch();
+        Dispatch columns = Dispatch.get(table, "Columns").toDispatch();
+        Dispatch.call(columns, "RemoveAll");
+        for (String column : TABLE_COLUMNS) {
+            Dispatch.call(columns, "Add", column);
+        }
+        Dispatch.call(table, "Sort", "[ReceivedTime]", new Variant(descending));
+
+        String storeId = resolveStoreId(folder);
+        List<MailMessage> result = new ArrayList<>(limit);
+        while (!Dispatch.get(table, "EndOfTable").getBoolean() && result.size() < limit) {
+            Dispatch row = Dispatch.call(table, "GetNextRow").toDispatch();
+            OffsetDateTime receivedAt = safeRowDate(row, "ReceivedTime");
+            boolean unread = safeRowBoolean(row, "UnRead");
+            if (!matchesListFilter(receivedAt, unread, since, unreadOnly)) {
+                if (canStopScanning(receivedAt, since, descending)) {
+                    break;
+                }
+                continue;
+            }
+            String entryId = safeRowString(row, "EntryID");
+            String to = null;
+            String cc = null;
+            String bcc = null;
+            String body = "";
+            List<AttachmentInfo> attachments = List.of();
+            if (StringUtils.hasText(entryId)) {
+                try {
+                    List<String> candidates = StringUtils.hasText(storeId) ? List.of(storeId) : List.of();
+                    Dispatch item = getItemFromId(namespace, entryId, candidates);
+                    to = readRecipients(item, 1);
+                    cc = readRecipients(item, 2);
+                    bcc = readRecipients(item, 3);
+                    body = readBodyText(item);
+                    attachments = hasAttachments(item) ? readAttachments(item) : List.of();
+                } catch (Exception ignored) {
+                    to = null;
+                    cc = null;
+                    bcc = null;
+                    body = "";
+                    attachments = List.of();
+                }
+            }
+            result.add(toMailMessageSummary(row, to, cc, bcc, body, attachments));
+        }
+        return result;
+    }
+
+    private List<MailMessage> listMessagesWithItems(
+            Dispatch folder,
+            int limit,
+            OffsetDateTime since,
+            boolean unreadOnly,
+            boolean descending
+    ) {
+        Dispatch items = Dispatch.get(folder, "Items").toDispatch();
+        Dispatch.call(items, "Sort", "[ReceivedTime]", new Variant(descending));
+
+        List<MailMessage> result = new ArrayList<>();
+        int count = Dispatch.get(items, "Count").getInt();
+        for (int index = 1; index <= count && result.size() < limit; index++) {
+            Dispatch item = Dispatch.call(items, "Item", new Variant(index)).toDispatch();
+            if (!"IPM.Note".equalsIgnoreCase(safeString(item, "MessageClass"))) {
+                continue;
+            }
+            OffsetDateTime receivedAt = safeDate(item, "ReceivedTime");
+            boolean unread = safeBoolean(item, "UnRead");
+            if (!matchesListFilter(receivedAt, unread, since, unreadOnly)) {
+                if (canStopScanning(receivedAt, since, descending)) {
+                    break;
+                }
+                continue;
+            }
+            result.add(toListMailMessageFromItem(item));
+        }
+        return result;
+    }
+
+    private boolean isDescendingSort(MessageQuery query) {
+        return !"asc".equalsIgnoreCase(query.getSortOrder());
+    }
+
+    private OffsetDateTime effectiveSince(MessageQuery query) {
+        return query.getSince() != null
+                ? query.getSince()
+                : OffsetDateTime.now(ZoneId.systemDefault()).minusDays(DEFAULT_LOOKBACK_DAYS);
+    }
+
+    private boolean matchesListFilter(OffsetDateTime receivedAt, boolean unread, OffsetDateTime since, boolean unreadOnly) {
+        if (unreadOnly && !unread) {
+            return false;
+        }
+        if (since != null && receivedAt != null && receivedAt.isBefore(since)) {
+            return false;
+        }
+        return since == null || receivedAt != null;
+    }
+
+    private boolean canStopScanning(OffsetDateTime receivedAt, OffsetDateTime since, boolean descending) {
+        return descending && since != null && receivedAt != null && receivedAt.isBefore(since);
+    }
+
+    private MailMessage toListMailMessageFromItem(Dispatch item) {
+        ensureMailItem(item);
+        return new MailMessage(
+                safeString(item, "EntryID"),
+                safeString(item, "Subject"),
+                safeString(item, "SenderName"),
+                readSenderEmail(item),
+                readRecipients(item, 1),
+                readRecipients(item, 2),
+                readRecipients(item, 3),
+                readBodyText(item),
+                null,
+                safeBoolean(item, "UnRead"),
+                safeDate(item, "ReceivedTime"),
+                null,
+                hasAttachments(item) ? readAttachments(item) : List.of()
+        );
+    }
+
+    private Variant readRowValue(Dispatch row, String column) {
+        try {
+            return Dispatch.call(row, "Item", column);
+        } catch (Exception ex) {
+            throw new OutlookComException("No se pudo leer la columna de Outlook: " + column, ex);
+        }
+    }
+
+    private String safeRowString(Dispatch row, String column) {
+        Variant variant = readRowValue(row, column);
+        return variant == null || variant.isNull() ? null : variant.toString();
+    }
+
+    private boolean safeRowBoolean(Dispatch row, String column) {
+        Variant variant = readRowValue(row, column);
+        return variant != null && !variant.isNull() && variant.getBoolean();
+    }
+
+    private OffsetDateTime safeRowDate(Dispatch row, String column) {
+        Variant variant = readRowValue(row, column);
+        if (variant == null || variant.isNull()) {
+            return null;
+        }
+        OffsetDateTime directDate = tryConvertVariantDate(variant);
+        if (directDate != null) {
+            return directDate;
+        }
+        String value = variant.toString();
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        throw new OutlookComException("No se pudo interpretar la columna fecha de Outlook: " + column);
+    }
+
+    private List<String> resolveStoreIds(Dispatch namespace) {
+        List<String> storeIds = new ArrayList<>();
+        try {
+            Dispatch stores = Dispatch.get(namespace, "Stores").toDispatch();
+            int count = Dispatch.get(stores, "Count").getInt();
+            for (int index = 1; index <= count; index++) {
+                Dispatch store = Dispatch.call(stores, "Item", new Variant(index)).toDispatch();
+                String storeId = safeString(store, "StoreID");
+                if (StringUtils.hasText(storeId)) {
+                    storeIds.add(storeId);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return storeIds;
+    }
+
+    private String resolveStoreId(Dispatch folder) {
+        try {
+            String directStoreId = safeString(folder, "StoreID");
+            if (StringUtils.hasText(directStoreId)) {
+                return directStoreId;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            Dispatch store = Dispatch.get(folder, "Store").toDispatch();
+            return safeString(store, "StoreID");
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String resolveStoreIdFromItem(Dispatch item) {
+        try {
+            Dispatch parent = Dispatch.get(item, "Parent").toDispatch();
+            return resolveStoreId(parent);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String readBodyText(Dispatch item) {
+        String plainBody = firstNonBlank(
+                readPropertyAccessorString(item, MAPI_BODY_PROPERTY),
+                readPropertyAccessorString(item, MAPI_BODY_PROPERTY_STRING8)
+        );
+        if (StringUtils.hasText(plainBody)) {
+            return plainBody;
+        }
+        String html = firstNonBlank(
+                readPropertyAccessorString(item, MAPI_HTML_PROPERTY),
+                readPropertyAccessorString(item, MAPI_HTML_PROPERTY_STRING8)
+        );
+        if (StringUtils.hasText(html)) {
+            return htmlToText(html);
+        }
+        try {
+            String directBody = safeString(item, "Body");
+            if (directBody != null) {
+                return directBody;
+            }
+        } catch (Exception ignored) {
+        }
+        try {
+            String directHtml = safeString(item, "HTMLBody");
+            if (StringUtils.hasText(directHtml)) {
+                return htmlToText(directHtml);
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    private String readHtmlBody(Dispatch item) {
+        String html = firstNonBlank(
+                readPropertyAccessorString(item, MAPI_HTML_PROPERTY),
+                readPropertyAccessorString(item, MAPI_HTML_PROPERTY_STRING8)
+        );
+        return html != null ? html : "";
+    }
+
+    private boolean hasAttachments(Dispatch item) {
+        Dispatch propertyAccessor = Dispatch.get(item, "PropertyAccessor").toDispatch();
+        try {
+            Variant variant = Dispatch.call(propertyAccessor, "GetProperty", MAPI_HAS_ATTACH_PROPERTY);
+            return variant != null && !variant.isNull() && variant.getBoolean();
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private String readPropertyAccessorString(Dispatch item, String propertyName) {
+        Dispatch propertyAccessor = Dispatch.get(item, "PropertyAccessor").toDispatch();
+        try {
+            return variantToText(Dispatch.call(propertyAccessor, "GetProperty", propertyName));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private String variantToText(Variant variant) {
+        if (variant == null || variant.isNull()) {
+            return null;
+        }
+        Object candidate = invokeVariantMethod(variant, "toJavaObject");
+        String fromObject = objectToText(candidate);
+        if (fromObject != null) {
+            return fromObject;
+        }
+        String text = variant.toString();
+        return StringUtils.hasText(text) ? text : null;
+    }
+
+    private String objectToText(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String text) {
+            return text;
+        }
+        if (value instanceof byte[] bytes) {
+            return decodeBytes(bytes);
+        }
+        if (value.getClass().isArray()) {
+            int length = java.lang.reflect.Array.getLength(value);
+            byte[] bytes = new byte[length];
+            for (int index = 0; index < length; index++) {
+                Object element = java.lang.reflect.Array.get(value, index);
+                if (!(element instanceof Number number)) {
+                    return null;
+                }
+                bytes[index] = number.byteValue();
+            }
+            return decodeBytes(bytes);
+        }
+        return null;
+    }
+
+    private String decodeBytes(byte[] bytes) {
+        if (bytes.length == 0) {
+            return "";
+        }
+        Charset charset = looksLikeUtf16(bytes) ? StandardCharsets.UTF_16LE : StandardCharsets.UTF_8;
+        return new String(bytes, charset).replace("\u0000", "");
+    }
+
+    private boolean looksLikeUtf16(byte[] bytes) {
+        if (bytes.length < 2) {
+            return false;
+        }
+        int zeroBytes = 0;
+        for (int index = 1; index < bytes.length; index += 2) {
+            if (bytes[index] == 0) {
+                zeroBytes++;
+            }
+        }
+        return zeroBytes > 0 && zeroBytes >= bytes.length / 4;
+    }
+
+    private String htmlToText(String html) {
+        return StringUtils.hasText(html) ? Jsoup.parse(html).text() : "";
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
         }
         return null;
     }

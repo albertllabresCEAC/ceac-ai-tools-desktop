@@ -137,6 +137,34 @@ It displays:
 - runtime state
 - Swagger URL
 
+#### Outlook message listing contract
+
+The Outlook local REST API and MCP wrapper now optimize message listing and detail retrieval for
+desktop Outlook stores.
+
+`GET /api/outlook/messages` and the `listMessages` MCP tool:
+
+- return newest messages first by default with `sortOrder=desc`
+- default `limit` to `20`
+- default `unreadOnly` to `false`
+- default `since` to `now - 7 days` when omitted by the caller
+- include `body` directly in the listing response
+- include `attachments` directly in the listing response
+- fill `to`, `cc` and `bcc` in the listing response
+
+Implementation notes:
+
+- folder scanning is driven by the Outlook `Table` API for ordering and lightweight row access
+- the runtime then resolves only the selected rows to `MailItem` objects to enrich `body`,
+  recipients and attachments
+- `getMessage` reuses a cached `storeId` when available so `GetItemFromID` does not have to probe
+  every open Outlook store
+- `getMessage` reads body content through `PropertyAccessor` first and falls back to `Body` /
+  `HTMLBody` only when Outlook does not expose the MAPI properties directly
+
+This keeps the response shape stable while avoiding the slowest COM paths for common listing and
+detail flows.
+
 ### Campus bot
 
 Shows bootstrap and runtime state for Campus.

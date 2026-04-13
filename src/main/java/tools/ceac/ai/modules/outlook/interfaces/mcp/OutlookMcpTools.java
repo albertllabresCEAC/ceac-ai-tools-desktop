@@ -29,7 +29,11 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -46,7 +50,7 @@ public class OutlookMcpTools {
         this.outlookService = outlookService;
     }
 
-    @Tool(description = "List Outlook Desktop messages. Call this tool with a JSON object, not a raw string. Input fields: folder, limit, unreadOnly. Allowed folder values: INBOX, DRAFTS, SENT, OUTBOX, DELETED. If folder is omitted, INBOX is used.")
+    @Tool(description = "List Outlook Desktop messages ordered by received date descending by default. Call this tool with a JSON object, not a raw string. Input fields: folder, limit, unreadOnly, since, sortOrder. Allowed folder values: INBOX, DRAFTS, SENT, OUTBOX, DELETED. sortOrder accepts desc or asc. If since is omitted, only the last 90 days are listed. If folder is omitted, INBOX is used.")
     public List<MailMessage> listMessages(MessageListToolRequest request) {
         MessageQuery query = new MessageQuery();
         if (request != null && request.getFolder() != null) {
@@ -54,6 +58,8 @@ public class OutlookMcpTools {
         }
         query.setLimit(request != null ? request.getLimit() : null);
         query.setUnreadOnly(request != null && Boolean.TRUE.equals(request.getUnreadOnly()));
+        query.setSince(parseSince(request != null ? request.getSince() : null));
+        query.setSortOrder(normalizeSortOrder(request != null ? request.getSortOrder() : null));
         return outlookService.listMessages(query);
     }
 
@@ -240,6 +246,37 @@ public class OutlookMcpTools {
 
     private OffsetDateTime sortTimestamp(McpSearchResult result) {
         return result.receivedAt() != null ? result.receivedAt() : result.sentAt();
+    }
+
+    private OffsetDateTime parseSince(String since) {
+        if (!StringUtils.hasText(since)) {
+            return null;
+        }
+        String value = since.trim();
+        try {
+            return OffsetDateTime.parse(value);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.ofInstant(Instant.parse(value), ZoneId.systemDefault());
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value).atZone(ZoneId.systemDefault()).toOffsetDateTime();
+        } catch (DateTimeParseException ex) {
+            throw new OutlookComException("since debe ser una fecha ISO-8601 valida", ex);
+        }
+    }
+
+    private String normalizeSortOrder(String sortOrder) {
+        if (!StringUtils.hasText(sortOrder)) {
+            return "desc";
+        }
+        String normalized = sortOrder.trim().toLowerCase(Locale.ROOT);
+        if (!normalized.equals("desc") && !normalized.equals("asc")) {
+            throw new OutlookComException("sortOrder invalido. Usa: desc, asc");
+        }
+        return normalized;
     }
 }
 
