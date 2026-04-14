@@ -31,6 +31,14 @@ public class ApiExceptionHandler {
         pd.setDetail(ex.getMessage());
         return pd;
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail handleBadRequest(IllegalArgumentException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
+        pd.setTitle("Bad request");
+        pd.setDetail(ex.getMessage());
+        return pd;
+    }
 }
 
 

@@ -24,6 +24,7 @@ public class LauncherResourceTokenService {
 
     private static final String LOCAL_ISSUER_PREFIX = "ceac-ai-tools://launcher/session";
     private static final String TOKEN_TYPE = "Bearer";
+    private static final long LOCAL_TOKEN_TTL_SECONDS = 24 * 60 * 60;
 
     public LauncherSessionResources issueSessionResources(
             ClientLoginResponse loginResponse,
@@ -69,7 +70,7 @@ public class LauncherResourceTokenService {
             String clientVersion
     ) {
         Instant issuedAt = Instant.now();
-        Instant expiresAt = loginResponse.expiresAt() == null ? issuedAt.plusSeconds(3600) : loginResponse.expiresAt();
+        Instant expiresAt = issuedAt.plusSeconds(LOCAL_TOKEN_TTL_SECONDS);
 
         JWTClaimsSet claims = new JWTClaimsSet.Builder()
                 .issuer(context.issuerUri())

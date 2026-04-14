@@ -14,11 +14,11 @@ import tools.ceac.ai.modules.outlook.domain.model.DraftDiscardToolRequest;
 import tools.ceac.ai.modules.outlook.domain.model.FolderType;
 import tools.ceac.ai.modules.outlook.domain.model.MailDraftResponse;
 import tools.ceac.ai.modules.outlook.domain.model.MailMessage;
-import tools.ceac.ai.modules.outlook.domain.model.McpSearchResult;
 import tools.ceac.ai.modules.outlook.domain.model.MessageGetToolRequest;
 import tools.ceac.ai.modules.outlook.domain.model.MessageListToolRequest;
 import tools.ceac.ai.modules.outlook.domain.model.MessageQuery;
-import tools.ceac.ai.modules.outlook.domain.model.MessageSearchToolRequest;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchRequest;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchResult;
 import tools.ceac.ai.modules.outlook.domain.model.SendMailRequest;
 import tools.ceac.ai.modules.outlook.domain.model.StatusResponse;
 import tools.ceac.ai.modules.outlook.domain.model.UpdateDraftRequest;
@@ -34,12 +34,8 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
-import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 public class OutlookMcpTools {
@@ -68,30 +64,9 @@ public class OutlookMcpTools {
         return outlookService.getMessage(request.getEntryId());
     }
 
-    @Tool(description = "Search Outlook Desktop messages by free text. Call this tool with a JSON object containing query, folder, limit and unreadOnly. If folder is omitted or set to ALL, the search runs across INBOX, SENT and DRAFTS. Use fetch with the returned entryId to retrieve the full message.")
-    public List<McpSearchResult> search(MessageSearchToolRequest request) {
-        int effectiveLimit = sanitizeLimit(request != null ? request.getLimit() : null);
-        List<FolderType> folders = resolveSearchFolders(request != null ? request.getFolder() : null);
-        Map<String, McpSearchResult> matches = new LinkedHashMap<>();
-
-        for (FolderType folderType : folders) {
-            MessageQuery messageQuery = new MessageQuery();
-            messageQuery.setFolder(folderType);
-            messageQuery.setUnreadOnly(request != null && Boolean.TRUE.equals(request.getUnreadOnly()));
-            messageQuery.setLimit(Math.max(effectiveLimit * 4, 25));
-
-            for (MailMessage message : outlookService.listMessages(messageQuery)) {
-                if (!matchesQuery(message, request != null ? request.getQuery() : null)) {
-                    continue;
-                }
-                matches.putIfAbsent(message.entryId(), toSearchResult(message, folderType));
-            }
-        }
-
-        return matches.values().stream()
-                .sorted(Comparator.comparing(this::sortTimestamp, Comparator.nullsLast(Comparator.reverseOrder())))
-                .limit(effectiveLimit)
-                .collect(Collectors.toList());
+    @Tool(description = "Search Outlook Desktop messages by free text. Call this tool with either a plain JSON object containing query, folder, limit, unreadOnly and optional since, or a wrapped object like {\"request\": {...}}. If folder is omitted or set to ALL, the search runs across INBOX, SENT and DRAFTS. Use fetch with the returned entryId to retrieve the full message.")
+    public List<MessageSearchResult> search(MessageSearchRequest request) {
+        return outlookService.searchMessages(request != null ? request : new MessageSearchRequest());
     }
 
     @Tool(description = "Fetch a full Outlook Desktop message by entryId. Call this tool with a JSON object containing entryId. Use this after search to read the complete content.")
@@ -175,13 +150,6 @@ public class OutlookMcpTools {
         }
     }
 
-    private List<FolderType> resolveSearchFolders(String folder) {
-        if (!StringUtils.hasText(folder) || "ALL".equalsIgnoreCase(folder.trim())) {
-            return List.of(FolderType.INBOX, FolderType.SENT, FolderType.DRAFTS);
-        }
-        return List.of(parseFolder(folder));
-    }
-
     private ComposeMode parseComposeMode(String mode) {
         if (mode == null || mode.isBlank()) {
             return ComposeMode.NEW;
@@ -191,61 +159,6 @@ public class OutlookMcpTools {
         } catch (IllegalArgumentException ex) {
             throw new OutlookComException("Compose mode invalido. Usa: NEW, REPLY, REPLY_ALL", ex);
         }
-    }
-
-    private int sanitizeLimit(Integer limit) {
-        if (limit == null) {
-            return 10;
-        }
-        return Math.max(1, Math.min(limit, 25));
-    }
-
-    private boolean matchesQuery(MailMessage message, String query) {
-        if (!StringUtils.hasText(query)) {
-            return true;
-        }
-        String normalizedQuery = query.toLowerCase(Locale.ROOT);
-        return contains(message.subject(), normalizedQuery)
-                || contains(message.senderName(), normalizedQuery)
-                || contains(message.senderEmail(), normalizedQuery)
-                || contains(message.to(), normalizedQuery)
-                || contains(message.cc(), normalizedQuery)
-                || contains(message.bcc(), normalizedQuery)
-                || contains(message.body(), normalizedQuery);
-    }
-
-    private boolean contains(String value, String query) {
-        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
-    }
-
-    private McpSearchResult toSearchResult(MailMessage message, FolderType folderType) {
-        return new McpSearchResult(
-                message.entryId(),
-                folderType.name(),
-                message.subject(),
-                message.senderName(),
-                message.senderEmail(),
-                buildSnippet(message),
-                message.unread(),
-                message.receivedAt(),
-                message.sentAt()
-        );
-    }
-
-    private String buildSnippet(MailMessage message) {
-        String source = StringUtils.hasText(message.body()) ? message.body() : message.htmlBody();
-        if (!StringUtils.hasText(source)) {
-            return null;
-        }
-        String normalized = source.replaceAll("\\s+", " ").trim();
-        if (normalized.length() <= 240) {
-            return normalized;
-        }
-        return normalized.substring(0, 237) + "...";
-    }
-
-    private OffsetDateTime sortTimestamp(McpSearchResult result) {
-        return result.receivedAt() != null ? result.receivedAt() : result.sentAt();
     }
 
     private OffsetDateTime parseSince(String since) {

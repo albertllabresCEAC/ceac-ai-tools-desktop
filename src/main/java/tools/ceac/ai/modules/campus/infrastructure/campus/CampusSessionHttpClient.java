@@ -103,6 +103,20 @@ public class CampusSessionHttpClient {
         return response;
     }
 
+    public HttpResponse<String> postMultipart(String url, String contentType, byte[] body, String logBody)
+            throws IOException, InterruptedException {
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofSeconds(properties.httpTimeoutSeconds()))
+                .header("Content-Type", contentType)
+                .header("Cookie", buildCookieHeaderForUrl(url))
+                .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        eventPublisher.publishEvent(new HttpResponseEvent(this, "POST", url, logBody, response.body()));
+        return response;
+    }
+
     public HttpResponse<byte[]> getBytes(String url) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))

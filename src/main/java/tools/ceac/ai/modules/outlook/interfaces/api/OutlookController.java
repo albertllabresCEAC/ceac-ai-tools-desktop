@@ -7,6 +7,8 @@ import tools.ceac.ai.modules.outlook.domain.model.CreateDraftRequest;
 import tools.ceac.ai.modules.outlook.domain.model.MailDraftResponse;
 import tools.ceac.ai.modules.outlook.domain.model.MailMessage;
 import tools.ceac.ai.modules.outlook.domain.model.MessageQuery;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchRequest;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchResult;
 import tools.ceac.ai.modules.outlook.domain.model.SendMailRequest;
 import tools.ceac.ai.modules.outlook.domain.model.StatusResponse;
 import tools.ceac.ai.modules.outlook.domain.model.UpdateDraftRequest;
@@ -42,6 +44,13 @@ public class OutlookController {
     @Operation(summary = "Lista mensajes desde una carpeta de Outlook")
     public List<MailMessage> listMessages(@Valid @ModelAttribute MessageQuery query) {
         return outlookService.listMessages(query);
+    }
+
+    @PostMapping("/messages/search")
+    @Operation(summary = "Busca mensajes de Outlook por texto y filtros",
+            description = "Acepta el cuerpo plano con query, folder, since, limit y unreadOnly, o el formato envuelto {\"request\": {...}} para clientes MCP que ya usen ese contrato.")
+    public List<MessageSearchResult> searchMessages(@Valid @RequestBody MessageSearchRequest request) {
+        return outlookService.searchMessages(request);
     }
 
     @GetMapping("/messages/{entryId}")

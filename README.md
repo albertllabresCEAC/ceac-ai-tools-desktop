@@ -16,6 +16,14 @@ Current product tabs:
 - `Campus bot`
 - `Trello bot`
 
+## Known limitations
+
+- Campus PDF resource creation and upload are currently unstable.
+- The `createPdfResource` flow depends on Moodle draft-file upload plus the final `modedit`
+  submission, and either step may fail depending on the current Moodle response shape.
+- Treat Campus resource upload as experimental for now. Prefer manual Moodle upload when the
+  resource is operationally important.
+
 The launcher does not manage Cloudflare, DNS or Keycloak administration directly. Those concerns stay in the control plane.
 
 ## Product structure
@@ -174,6 +182,12 @@ Campus differs from qBid:
 - it does not ask for username and password in Swing fields
 - login happens only in the browser modal when the session is missing or relaunched
 - Moodle cookies are copied to the Java HTTP client and then reused by REST and MCP
+
+Current limitation:
+
+- creating a PDF resource through Campus is not reliable yet
+- the resource-upload path is still experimental and may fail during draft upload or final
+  Moodle form submission
 
 ### QBid bot
 

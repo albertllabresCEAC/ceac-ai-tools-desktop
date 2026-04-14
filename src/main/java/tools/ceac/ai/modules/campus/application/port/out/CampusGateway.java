@@ -92,6 +92,25 @@ public interface CampusGateway {
 
     HttpResponse<String> getQuestionBank(String cmid) throws IOException, InterruptedException;
 
+    HttpResponse<String> getResourceModEditForm(String courseId, String section) throws IOException, InterruptedException;
+
+    HttpResponse<String> uploadResourceDraftFile(
+            String sesskey,
+            String repoId,
+            String itemid,
+            String author,
+            String savepath,
+            String title,
+            String contextId,
+            String fileName,
+            byte[] content
+    ) throws IOException, InterruptedException;
+
+    HttpResponse<String> listDraftFiles(String sesskey, String clientId, String filepath, String itemid)
+            throws IOException, InterruptedException;
+
+    HttpResponse<String> postResourceEdit(java.util.Map<String, String> params) throws IOException, InterruptedException;
+
     HttpResponse<String> getNewQuestionForm(String cmid, String courseId, String categoryId, String sesskey) throws IOException, InterruptedException;
 
     HttpResponse<String> getQuestionEditForm(String questionId, String cmid) throws IOException, InterruptedException;

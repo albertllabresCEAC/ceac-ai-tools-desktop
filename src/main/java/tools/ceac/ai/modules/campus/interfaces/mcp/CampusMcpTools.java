@@ -1,6 +1,7 @@
 package tools.ceac.ai.modules.campus.interfaces.mcp;
 
 import tools.ceac.ai.modules.campus.application.service.CampusSessionService;
+import tools.ceac.ai.modules.campus.application.service.CreateCoursePdfResourceUseCase;
 import tools.ceac.ai.modules.campus.application.service.CreateQuestionInBankUseCase;
 import tools.ceac.ai.modules.campus.application.service.CreateQuizMultichoiceQuestionUseCase;
 import tools.ceac.ai.modules.campus.application.service.DeleteQuizSlotUseCase;
@@ -33,6 +34,8 @@ import tools.ceac.ai.modules.campus.application.service.UpdateQuizQuestionUseCas
 import tools.ceac.ai.modules.campus.domain.model.ConversationDetail;
 import tools.ceac.ai.modules.campus.domain.model.CourseDetail;
 import tools.ceac.ai.modules.campus.domain.model.DashboardSnapshot;
+import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCoursePdfResourceRequest;
+import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCoursePdfResourceResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.DeleteQuizSlotResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.UpdateQuizMultichoiceQuestionRequest;
 import org.springframework.ai.tool.annotation.Tool;
@@ -69,6 +72,7 @@ public class CampusMcpTools {
     private final GetQuizStructureUseCase getQuizStructureUseCase;
     private final GetQuizQuestionCategoriesUseCase getQuizQuestionCategoriesUseCase;
     private final GetQuizQuestionUseCase getQuizQuestionUseCase;
+    private final CreateCoursePdfResourceUseCase createCoursePdfResourceUseCase;
     private final CreateQuizMultichoiceQuestionUseCase createQuizMultichoiceQuestionUseCase;
     private final CreateQuestionInBankUseCase createQuestionInBankUseCase;
     private final UpdateQuizQuestionUseCase updateQuizQuestionUseCase;
@@ -101,6 +105,7 @@ public class CampusMcpTools {
             GetQuizStructureUseCase getQuizStructureUseCase,
             GetQuizQuestionCategoriesUseCase getQuizQuestionCategoriesUseCase,
             GetQuizQuestionUseCase getQuizQuestionUseCase,
+            CreateCoursePdfResourceUseCase createCoursePdfResourceUseCase,
             CreateQuizMultichoiceQuestionUseCase createQuizMultichoiceQuestionUseCase,
             CreateQuestionInBankUseCase createQuestionInBankUseCase,
             UpdateQuizQuestionUseCase updateQuizQuestionUseCase,
@@ -131,6 +136,7 @@ public class CampusMcpTools {
         this.getQuizStructureUseCase = getQuizStructureUseCase;
         this.getQuizQuestionCategoriesUseCase = getQuizQuestionCategoriesUseCase;
         this.getQuizQuestionUseCase = getQuizQuestionUseCase;
+        this.createCoursePdfResourceUseCase = createCoursePdfResourceUseCase;
         this.createQuizMultichoiceQuestionUseCase = createQuizMultichoiceQuestionUseCase;
         this.createQuestionInBankUseCase = createQuestionInBankUseCase;
         this.updateQuizQuestionUseCase = updateQuizQuestionUseCase;
@@ -176,6 +182,34 @@ public class CampusMcpTools {
     @Tool(description = "Perfil completo de un usuario (alumno) por su userId: nombre, email, paÃ­s, cursos matriculados y accesos.")
     public Object getUserProfile(String userId) {
         return getUserProfileUseCase.execute(userId);
+    }
+
+    @Tool(description = """
+            ATENCION: esta herramienta da problemas por ahora y la subida del recurso puede fallar.
+            El flujo sigue siendo experimental y no debe tratarse como estable en produccion.
+            Crea un recurso de tipo Archivo subiendo un PDF a una seccion de un curso.
+            Requiere courseId, section, name y base64Content.
+            fileName es opcional; si no se informa se genera a partir de name con extension .pdf.
+            description es opcional y acepta HTML o texto.
+            visible y showDescription son opcionales.
+            ANTES DE EJECUTAR: muestra al usuario un resumen del curso, la seccion, el nombre del recurso y el nombre del PDF, y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
+    public CreateCoursePdfResourceResponse createPdfResource(String courseId,
+                                                             Integer section,
+                                                             String name,
+                                                             String description,
+                                                             String fileName,
+                                                             String base64Content,
+                                                             Boolean visible,
+                                                             Boolean showDescription) {
+        return createCoursePdfResourceUseCase.execute(courseId, new CreateCoursePdfResourceRequest(
+                section,
+                name,
+                description,
+                fileName,
+                base64Content,
+                visible,
+                showDescription
+        ));
     }
 
     // â”€â”€ TAREAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

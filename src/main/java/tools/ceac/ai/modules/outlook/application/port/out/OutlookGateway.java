@@ -8,6 +8,8 @@ import tools.ceac.ai.modules.outlook.domain.model.CreateDraftRequest;
 import tools.ceac.ai.modules.outlook.domain.model.MailDraftResponse;
 import tools.ceac.ai.modules.outlook.domain.model.MailMessage;
 import tools.ceac.ai.modules.outlook.domain.model.MessageQuery;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchRequest;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchResult;
 import tools.ceac.ai.modules.outlook.domain.model.SendMailRequest;
 import tools.ceac.ai.modules.outlook.domain.model.StatusResponse;
 import tools.ceac.ai.modules.outlook.domain.model.UpdateDraftRequest;
@@ -21,6 +23,8 @@ import tools.ceac.ai.modules.outlook.domain.model.UpdateDraftRequest;
 public interface OutlookGateway {
 
     List<MailMessage> listMessages(MessageQuery query);
+
+    List<MessageSearchResult> searchMessages(MessageSearchRequest request);
 
     MailMessage getMessage(String entryId);
 

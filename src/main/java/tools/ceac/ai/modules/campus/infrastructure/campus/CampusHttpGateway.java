@@ -5,10 +5,13 @@ import tools.ceac.ai.modules.campus.infrastructure.config.CampusProperties;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.net.URLEncoder;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Infrastructure gateway for campus HTTP calls.
@@ -392,6 +395,56 @@ public class CampusHttpGateway implements CampusGateway {
     }
 
     @Override
+    public HttpResponse<String> getResourceModEditForm(String courseId, String section) throws IOException, InterruptedException {
+        String url = properties.baseUrl() + "/course/mod.php?id=" + courseId
+                + "&add=resource"
+                + "&section=" + section
+                + "&sr=0"
+                + "&beforemod=0";
+        return sessionHttpClient.get(url);
+    }
+
+    @Override
+    public HttpResponse<String> uploadResourceDraftFile(
+            String sesskey,
+            String repoId,
+            String itemid,
+            String author,
+            String savepath,
+            String title,
+            String contextId,
+            String fileName,
+            byte[] content
+    ) throws IOException, InterruptedException {
+        String url = properties.baseUrl() + "/repository/repository_ajax.php?action=upload";
+        String boundary = "----CeacAiToolsBoundary" + UUID.randomUUID().toString().replace("-", "");
+        byte[] body = buildMultipartUploadBody(boundary, sesskey, repoId, itemid, author, savepath, title, contextId, fileName, content);
+        String logBody = "multipart upload fileName=" + fileName
+                + ", itemid=" + itemid
+                + ", contextId=" + contextId
+                + ", repoId=" + repoId
+                + ", size=" + (content == null ? 0 : content.length);
+        return sessionHttpClient.postMultipart(url, "multipart/form-data; boundary=" + boundary, body, logBody);
+    }
+
+    @Override
+    public HttpResponse<String> listDraftFiles(String sesskey, String clientId, String filepath, String itemid)
+            throws IOException, InterruptedException {
+        String url = properties.baseUrl() + "/repository/draftfiles_ajax.php?action=list";
+        String body = "sesskey=" + URLEncoder.encode(sesskey, StandardCharsets.UTF_8)
+                + "&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+                + "&filepath=" + URLEncoder.encode(filepath, StandardCharsets.UTF_8)
+                + "&itemid=" + URLEncoder.encode(itemid, StandardCharsets.UTF_8);
+        return sessionHttpClient.postForm(url, body);
+    }
+
+    @Override
+    public HttpResponse<String> postResourceEdit(Map<String, String> params) throws IOException, InterruptedException {
+        String url = properties.baseUrl() + "/course/modedit.php";
+        return sessionHttpClient.postForm(url, encodeForm(params));
+    }
+
+    @Override
     public HttpResponse<String> getNewQuestionForm(String cmid, String courseId, String categoryId, String sesskey)
             throws IOException, InterruptedException {
         String returnUrl = URLEncoder.encode("/mod/quiz/edit.php?cmid=" + cmid + "&addonpage=0", StandardCharsets.UTF_8);
@@ -422,14 +475,7 @@ public class CampusHttpGateway implements CampusGateway {
     @Override
     public HttpResponse<String> postQuestionEdit(String questionId, String cmid, Map<String, String> params) throws IOException, InterruptedException {
         String url = properties.baseUrl() + "/question/bank/editquestion/question.php";
-        StringBuilder body = new StringBuilder();
-        for (Map.Entry<String, String> entry : params.entrySet()) {
-            if (body.length() > 0) body.append('&');
-            body.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
-                .append('=')
-                .append(URLEncoder.encode(entry.getValue() != null ? entry.getValue() : "", StandardCharsets.UTF_8));
-        }
-        return sessionHttpClient.postForm(url, body.toString());
+        return sessionHttpClient.postForm(url, encodeForm(params));
     }
 
     @Override
@@ -483,9 +529,93 @@ public class CampusHttpGateway implements CampusGateway {
             return false;
         }
         String finalUrl = response.uri().toString();
-        return finalUrl.startsWith(properties.baseUrl())
-                && !finalUrl.equalsIgnoreCase(properties.loginUrl())
-                && !finalUrl.contains("/login/index.php");
+        if (!finalUrl.startsWith(properties.baseUrl())
+                || finalUrl.equalsIgnoreCase(properties.loginUrl())
+                || finalUrl.contains("/login/index.php")) {
+            return false;
+        }
+        return !looksLikeLoginPage(response.body());
+    }
+
+    private boolean looksLikeLoginPage(String body) {
+        if (body == null || body.isBlank()) {
+            return false;
+        }
+        String normalized = body.toLowerCase(Locale.ROOT);
+        if (normalized.contains("id=\"page-login-index\"") || normalized.contains("id='page-login-index'")) {
+            return true;
+        }
+        boolean hasLoginFormAction = normalized.contains("action=\"https://campus.ceacfp.es/login/index.php\"")
+                || normalized.contains("action='https://campus.ceacfp.es/login/index.php'")
+                || normalized.contains("action=\"/login/index.php\"")
+                || normalized.contains("action='/login/index.php'");
+        boolean hasCredentialsFields = (normalized.contains("name=\"username\"") || normalized.contains("id=\"username\""))
+                && (normalized.contains("name=\"password\"") || normalized.contains("id=\"password\""));
+        boolean hasLoginToken = normalized.contains("name=\"logintoken\"") || normalized.contains("id=\"loginbtn\"");
+        return (hasLoginFormAction && hasCredentialsFields) || (hasLoginToken && hasCredentialsFields);
+    }
+
+    private String encodeForm(Map<String, String> params) {
+        StringBuilder body = new StringBuilder();
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            if (body.length() > 0) {
+                body.append('&');
+            }
+            body.append(URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8))
+                    .append('=')
+                    .append(URLEncoder.encode(entry.getValue() != null ? entry.getValue() : "", StandardCharsets.UTF_8));
+        }
+        return body.toString();
+    }
+
+    private byte[] buildMultipartUploadBody(
+            String boundary,
+            String sesskey,
+            String repoId,
+            String itemid,
+            String author,
+            String savepath,
+            String title,
+            String contextId,
+            String fileName,
+            byte[] content
+    ) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        writeFilePart(output, boundary, "repo_upload_file", fileName, "application/pdf", content);
+        writeTextPart(output, boundary, "sesskey", sesskey);
+        writeTextPart(output, boundary, "repo_id", repoId);
+        writeTextPart(output, boundary, "itemid", itemid);
+        writeTextPart(output, boundary, "author", author);
+        writeTextPart(output, boundary, "savepath", savepath);
+        writeTextPart(output, boundary, "title", title);
+        writeTextPart(output, boundary, "ctx_id", contextId);
+        output.write(("--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8));
+        return output.toByteArray();
+    }
+
+    private void writeTextPart(ByteArrayOutputStream output, String boundary, String name, String value) throws IOException {
+        output.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+        output.write(("Content-Disposition: form-data; name=\"" + name + "\"\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+        output.write((value != null ? value : "").getBytes(StandardCharsets.UTF_8));
+        output.write("\r\n".getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void writeFilePart(
+            ByteArrayOutputStream output,
+            String boundary,
+            String fieldName,
+            String fileName,
+            String contentType,
+            byte[] content
+    ) throws IOException {
+        output.write(("--" + boundary + "\r\n").getBytes(StandardCharsets.UTF_8));
+        output.write(("Content-Disposition: form-data; name=\"" + fieldName + "\"; filename=\"" + fileName + "\"\r\n")
+                .getBytes(StandardCharsets.UTF_8));
+        output.write(("Content-Type: " + contentType + "\r\n\r\n").getBytes(StandardCharsets.UTF_8));
+        if (content != null) {
+            output.write(content);
+        }
+        output.write("\r\n".getBytes(StandardCharsets.UTF_8));
     }
 }
 

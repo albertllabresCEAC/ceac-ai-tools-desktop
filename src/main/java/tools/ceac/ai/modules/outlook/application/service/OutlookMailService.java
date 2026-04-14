@@ -10,6 +10,8 @@ import tools.ceac.ai.modules.outlook.domain.model.CreateDraftRequest;
 import tools.ceac.ai.modules.outlook.domain.model.MailDraftResponse;
 import tools.ceac.ai.modules.outlook.domain.model.MailMessage;
 import tools.ceac.ai.modules.outlook.domain.model.MessageQuery;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchRequest;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchResult;
 import tools.ceac.ai.modules.outlook.domain.model.SendMailRequest;
 import tools.ceac.ai.modules.outlook.domain.model.StatusResponse;
 import tools.ceac.ai.modules.outlook.domain.model.UpdateDraftRequest;
@@ -30,6 +32,10 @@ public class OutlookMailService {
 
     public List<MailMessage> listMessages(MessageQuery query) {
         return gateway.listMessages(query);
+    }
+
+    public List<MessageSearchResult> searchMessages(MessageSearchRequest request) {
+        return gateway.searchMessages(request);
     }
 
     public MailMessage getMessage(String entryId) {

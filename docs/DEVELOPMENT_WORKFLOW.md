@@ -99,6 +99,16 @@ If you change any of these in the control plane:
 
 then the current desktop session must log out and log in again to pick up the new bootstrap list.
 
+## Current Campus limitation
+
+Campus PDF resource upload is not considered stable yet.
+
+The current implementation depends on Moodle draft-file upload plus a final `modedit` form
+submission, so small Moodle-side HTML or response changes may break the flow.
+
+For verification and operator-facing demos, prefer read-only Campus actions or manual Moodle upload
+when the resource must be created reliably.
+
 ## Cleaning the local environment
 
 If you run into stale local state, check:

@@ -68,6 +68,11 @@ Campus is the most explicitly layered runtime:
 - `infrastructure`
 - `interfaces`
 
+Current limitation:
+
+- Campus PDF resource upload is still experimental because it depends on Moodle draft upload and
+  `modedit` submission details that are not stable enough yet
+
 ### `tools.ceac.ai.modules.qbid`
 
 qBid module only.

@@ -12,6 +12,8 @@ import tools.ceac.ai.modules.outlook.domain.model.FolderType;
 import tools.ceac.ai.modules.outlook.domain.model.MailDraftResponse;
 import tools.ceac.ai.modules.outlook.domain.model.MailMessage;
 import tools.ceac.ai.modules.outlook.domain.model.MessageQuery;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchRequest;
+import tools.ceac.ai.modules.outlook.domain.model.MessageSearchResult;
 import tools.ceac.ai.modules.outlook.domain.model.SendMailRequest;
 import tools.ceac.ai.modules.outlook.domain.model.StatusResponse;
 import tools.ceac.ai.modules.outlook.domain.model.UpdateDraftRequest;
@@ -41,7 +43,9 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -108,6 +112,28 @@ public class OutlookComGateway implements OutlookGateway {
             } catch (Exception ex) {
                 return listMessagesWithItems(folder, limit, since, query.isUnreadOnly(), descending);
             }
+        });
+    }
+
+    public List<MessageSearchResult> searchMessages(MessageSearchRequest request) {
+        MessageSearchRequest effectiveRequest = request != null ? request : new MessageSearchRequest();
+        int limit = sanitizeSearchLimit(effectiveRequest.getLimit());
+        boolean unreadOnly = Boolean.TRUE.equals(effectiveRequest.getUnreadOnly());
+        OffsetDateTime since = parseSince(effectiveRequest.getSince());
+        String normalizedQuery = normalizeQuery(effectiveRequest.getQuery());
+
+        return withNamespace(namespace -> {
+            Map<String, MessageSearchResult> matches = new LinkedHashMap<>();
+            for (FolderType folderType : resolveSearchFolders(effectiveRequest.getFolder())) {
+                Dispatch folder = getDefaultFolder(namespace, folderType);
+                for (MessageSearchResult match : searchFolder(namespace, folder, folderType, normalizedQuery, unreadOnly, since)) {
+                    matches.putIfAbsent(match.entryId(), match);
+                }
+            }
+            return matches.values().stream()
+                    .sorted(Comparator.comparing(this::sortTimestamp, Comparator.nullsLast(Comparator.reverseOrder())))
+                    .limit(limit)
+                    .toList();
         });
     }
 
@@ -279,6 +305,17 @@ public class OutlookComGateway implements OutlookGateway {
 
     private Dispatch getDefaultFolder(Dispatch namespace, FolderType folderType) {
         return Dispatch.call(namespace, "GetDefaultFolder", new Variant(folderType.getComValue())).toDispatch();
+    }
+
+    private List<FolderType> resolveSearchFolders(String folder) {
+        if (!StringUtils.hasText(folder) || "ALL".equalsIgnoreCase(folder.trim())) {
+            return List.of(FolderType.INBOX, FolderType.SENT, FolderType.DRAFTS);
+        }
+        try {
+            return List.of(FolderType.valueOf(folder.trim().toUpperCase(Locale.ROOT)));
+        } catch (IllegalArgumentException exception) {
+            throw new OutlookComException("Folder invalida. Usa: INBOX, DRAFTS, SENT, OUTBOX, DELETED, ALL", exception);
+        }
     }
 
     private Dispatch getItemFromId(Dispatch namespace, String entryId) {
@@ -788,8 +825,81 @@ public class OutlookComGateway implements OutlookGateway {
         return result;
     }
 
+    private List<MessageSearchResult> searchFolder(
+            Dispatch namespace,
+            Dispatch folder,
+            FolderType folderType,
+            String normalizedQuery,
+            boolean unreadOnly,
+            OffsetDateTime since
+    ) {
+        Dispatch items = Dispatch.get(folder, "Items").toDispatch();
+        Dispatch.call(items, "Sort", "[ReceivedTime]", new Variant(true));
+
+        List<MessageSearchResult> result = new ArrayList<>();
+        int count = Dispatch.get(items, "Count").getInt();
+        String storeId = resolveStoreId(folder);
+        for (int index = 1; index <= count; index++) {
+            Dispatch item = Dispatch.call(items, "Item", new Variant(index)).toDispatch();
+            if (!"IPM.Note".equalsIgnoreCase(safeString(item, "MessageClass"))) {
+                continue;
+            }
+            OffsetDateTime receivedAt = safeDate(item, "ReceivedTime");
+            boolean unread = safeBoolean(item, "UnRead");
+            if (!matchesListFilter(receivedAt, unread, since, unreadOnly)) {
+                if (canStopScanning(receivedAt, since, true)) {
+                    break;
+                }
+                continue;
+            }
+            String entryId = safeString(item, "EntryID");
+            if (!StringUtils.hasText(entryId)) {
+                continue;
+            }
+            if (!matchesSearchQuery(item, normalizedQuery)) {
+                continue;
+            }
+            if (StringUtils.hasText(storeId)) {
+                storeIdByEntryId.putIfAbsent(entryId, storeId);
+            }
+            result.add(toSearchResult(item, folderType));
+        }
+        return result;
+    }
+
     private boolean isDescendingSort(MessageQuery query) {
         return !"asc".equalsIgnoreCase(query.getSortOrder());
+    }
+
+    private int sanitizeSearchLimit(Integer limit) {
+        if (limit == null) {
+            return 20;
+        }
+        return Math.max(1, Math.min(limit, 200));
+    }
+
+    private String normalizeQuery(String query) {
+        return StringUtils.hasText(query) ? query.trim().toLowerCase(Locale.ROOT) : null;
+    }
+
+    private OffsetDateTime parseSince(String since) {
+        if (!StringUtils.hasText(since)) {
+            return null;
+        }
+        String value = since.trim();
+        try {
+            return OffsetDateTime.parse(value);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.ofInstant(Instant.parse(value), ZoneId.systemDefault());
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value).atZone(ZoneId.systemDefault()).toOffsetDateTime();
+        } catch (DateTimeParseException exception) {
+            throw new OutlookComException("since debe ser una fecha ISO-8601 valida", exception);
+        }
     }
 
     private OffsetDateTime effectiveSince(MessageQuery query) {
@@ -812,6 +922,23 @@ public class OutlookComGateway implements OutlookGateway {
         return descending && since != null && receivedAt != null && receivedAt.isBefore(since);
     }
 
+    private boolean matchesSearchQuery(Dispatch item, String normalizedQuery) {
+        if (!StringUtils.hasText(normalizedQuery)) {
+            return true;
+        }
+        return containsIgnoreCase(safeStringOrNull(item, "Subject"), normalizedQuery)
+                || containsIgnoreCase(safeStringOrNull(item, "SenderName"), normalizedQuery)
+                || containsIgnoreCase(readSenderEmail(item), normalizedQuery)
+                || containsIgnoreCase(readRecipients(item, 1), normalizedQuery)
+                || containsIgnoreCase(readRecipients(item, 2), normalizedQuery)
+                || containsIgnoreCase(readRecipients(item, 3), normalizedQuery)
+                || containsIgnoreCase(readBodyText(item), normalizedQuery);
+    }
+
+    private boolean containsIgnoreCase(String value, String query) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(query);
+    }
+
     private MailMessage toListMailMessageFromItem(Dispatch item) {
         ensureMailItem(item);
         return new MailMessage(
@@ -829,6 +956,36 @@ public class OutlookComGateway implements OutlookGateway {
                 null,
                 hasAttachments(item) ? readAttachments(item) : List.of()
         );
+    }
+
+    private MessageSearchResult toSearchResult(Dispatch item, FolderType folderType) {
+        String body = readBodyText(item);
+        return new MessageSearchResult(
+                safeString(item, "EntryID"),
+                folderType.name(),
+                safeString(item, "Subject"),
+                safeString(item, "SenderName"),
+                readSenderEmail(item),
+                buildSnippet(body),
+                safeBoolean(item, "UnRead"),
+                safeDate(item, "ReceivedTime"),
+                safeDate(item, "SentOn")
+        );
+    }
+
+    private String buildSnippet(String body) {
+        if (!StringUtils.hasText(body)) {
+            return null;
+        }
+        String normalized = body.replaceAll("\\s+", " ").trim();
+        if (normalized.length() <= 240) {
+            return normalized;
+        }
+        return normalized.substring(0, 237) + "...";
+    }
+
+    private OffsetDateTime sortTimestamp(MessageSearchResult result) {
+        return result.receivedAt() != null ? result.receivedAt() : result.sentAt();
     }
 
     private Variant readRowValue(Dispatch row, String column) {
