@@ -3,7 +3,6 @@ package tools.ceac.ai.modules.campus.infrastructure.campus;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.MissingNode;
-import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.springframework.stereotype.Component;
@@ -11,7 +10,6 @@ import tools.ceac.ai.modules.campus.domain.model.ResourceModEditFormData;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -25,19 +23,17 @@ public class MoodleResourceModEditParser {
     private static final String DEFAULT_UPLOAD_REPOSITORY_ID = "5";
 
     private final ObjectMapper objectMapper;
+    private final MoodleModEditFormFieldExtractor fieldExtractor;
 
-    public MoodleResourceModEditParser(ObjectMapper objectMapper) {
+    public MoodleResourceModEditParser(ObjectMapper objectMapper,
+                                       MoodleModEditFormFieldExtractor fieldExtractor) {
         this.objectMapper = objectMapper;
+        this.fieldExtractor = fieldExtractor;
     }
 
     public ResourceModEditFormData parse(String html, String baseUrl) {
-        Document doc = Jsoup.parse(html, baseUrl);
-        Element form = doc.selectFirst("form.mform[action*=modedit.php]");
-        if (form == null) {
-            throw new IllegalStateException("resource_modedit_form_not_found");
-        }
-
-        Map<String, String> fields = extractFormFields(form);
+        Element form = fieldExtractor.requireModEditForm(html, baseUrl, "resource_modedit_form_not_found");
+        Map<String, String> fields = fieldExtractor.extractFormFields(form);
         JsonNode fileManagerConfig = extractFileManagerConfig(html, FILE_MANAGER_TARGET);
 
         String filesItemId = firstNonBlank(
@@ -47,7 +43,7 @@ public class MoodleResourceModEditParser {
         String clientId = asTextOrNull(fileManagerConfig.get("client_id"));
         String contextId = firstNonBlank(
                 asTextOrNull(fileManagerConfig.path("context").get("id")),
-                extractContextIdFromObject(doc)
+                extractContextIdFromObject(form.ownerDocument())
         );
         String author = firstNonBlank(
                 asTextOrNull(fileManagerConfig.get("author")),
@@ -73,52 +69,6 @@ public class MoodleResourceModEditParser {
                 author,
                 uploadRepositoryId
         );
-    }
-
-    private Map<String, String> extractFormFields(Element form) {
-        Map<String, String> fields = new LinkedHashMap<>();
-        for (Element element : form.select("input[name], textarea[name], select[name]")) {
-            if (element.hasAttr("disabled")) {
-                continue;
-            }
-            String name = element.attr("name");
-            if (name == null || name.isBlank()) {
-                continue;
-            }
-            String value = switch (element.tagName()) {
-                case "textarea" -> element.text();
-                case "select" -> extractSelectValue(element);
-                default -> extractInputValue(element);
-            };
-            if (value != null) {
-                fields.put(name, value);
-            }
-        }
-        return fields;
-    }
-
-    private String extractSelectValue(Element select) {
-        Element selected = select.selectFirst("option[selected]");
-        if (selected != null) {
-            return selected.attr("value");
-        }
-        Element first = select.selectFirst("option");
-        return first != null ? first.attr("value") : "";
-    }
-
-    private String extractInputValue(Element input) {
-        String type = input.attr("type").toLowerCase();
-        if ("file".equals(type) || "submit".equals(type) || "button".equals(type)
-                || "reset".equals(type) || "image".equals(type)) {
-            return null;
-        }
-        if ("checkbox".equals(type) || "radio".equals(type)) {
-            if (!input.hasAttr("checked")) {
-                return null;
-            }
-            return input.hasAttr("value") ? input.attr("value") : "1";
-        }
-        return input.attr("value");
     }
 
     private JsonNode extractFileManagerConfig(String html, String target) {

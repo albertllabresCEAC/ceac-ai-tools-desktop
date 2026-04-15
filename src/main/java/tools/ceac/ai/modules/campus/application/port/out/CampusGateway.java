@@ -92,7 +92,7 @@ public interface CampusGateway {
 
     HttpResponse<String> getQuestionBank(String cmid) throws IOException, InterruptedException;
 
-    HttpResponse<String> getResourceModEditForm(String courseId, String section) throws IOException, InterruptedException;
+    HttpResponse<String> getCourseModEditForm(String courseId, String section, String moduleName) throws IOException, InterruptedException;
 
     HttpResponse<String> uploadResourceDraftFile(
             String sesskey,
@@ -109,7 +109,7 @@ public interface CampusGateway {
     HttpResponse<String> listDraftFiles(String sesskey, String clientId, String filepath, String itemid)
             throws IOException, InterruptedException;
 
-    HttpResponse<String> postResourceEdit(java.util.Map<String, String> params) throws IOException, InterruptedException;
+    HttpResponse<String> postCourseModEdit(java.util.Map<String, String> params) throws IOException, InterruptedException;
 
     HttpResponse<String> getNewQuestionForm(String cmid, String courseId, String categoryId, String sesskey) throws IOException, InterruptedException;
 

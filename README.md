@@ -23,6 +23,9 @@ Current product tabs:
   submission, and either step may fail depending on the current Moodle response shape.
 - Treat Campus resource upload as experimental for now. Prefer manual Moodle upload when the
   resource is operationally important.
+- Campus assignment creation now exists through REST and MCP, but it still depends on the live
+  Moodle `modedit.php` form shape. If Moodle changes that form, the serializer may need to be
+  updated again.
 
 The launcher does not manage Cloudflare, DNS or Keycloak administration directly. Those concerns stay in the control plane.
 
@@ -188,6 +191,33 @@ Current limitation:
 - creating a PDF resource through Campus is not reliable yet
 - the resource-upload path is still experimental and may fail during draft upload or final
   Moodle form submission
+
+Campus authoring support currently includes:
+
+- `createAssignment`
+  - creates a Moodle `assign` activity in a target course section without uploading attachments
+  - available through REST and MCP
+  - accepts assignment description, activity instructions, visibility flags and optional dates
+- `createPdfResource`
+  - uploads a PDF draft file and submits the final Moodle resource form
+  - still experimental
+
+Implementation notes:
+
+- Campus creation flows now share the same generic `course/mod.php -> course/modedit.php`
+  gateway instead of duplicating a resource-only path
+- assignment creation uses the real Moodle form fields from `modedit.php`, not an undocumented
+  REST shortcut
+- the form extractor explicitly ignores empty multiselect widgets such as `tags[]` while keeping
+  required hidden companions such as `_qf__force_multiselect_submission`
+
+Validation notes for assignment creation:
+
+- `section` and `name` are required
+- date fields accept ISO-8601 local values such as `2026-04-30T23:59`, plain dates such as
+  `2026-04-30`, or zoned timestamps
+- if Moodle keeps the user on `course/modedit.php`, the runtime treats that as a creation
+  validation failure
 
 ### QBid bot
 
@@ -431,4 +461,5 @@ These are runtime artifacts and should not be treated as source-of-truth documen
 - [`docs/LAUNCHER_ARCHITECTURE.md`](docs/LAUNCHER_ARCHITECTURE.md)
 - [`docs/REMOTE_MCP_SETUP.md`](docs/REMOTE_MCP_SETUP.md)
 - [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md)
+- [`docs/CAMPUS_ACTIVITY_AUTHORING.md`](docs/CAMPUS_ACTIVITY_AUTHORING.md)
 

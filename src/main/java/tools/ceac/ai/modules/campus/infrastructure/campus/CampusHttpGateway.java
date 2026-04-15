@@ -395,9 +395,9 @@ public class CampusHttpGateway implements CampusGateway {
     }
 
     @Override
-    public HttpResponse<String> getResourceModEditForm(String courseId, String section) throws IOException, InterruptedException {
+    public HttpResponse<String> getCourseModEditForm(String courseId, String section, String moduleName) throws IOException, InterruptedException {
         String url = properties.baseUrl() + "/course/mod.php?id=" + courseId
-                + "&add=resource"
+                + "&add=" + URLEncoder.encode(moduleName, StandardCharsets.UTF_8)
                 + "&section=" + section
                 + "&sr=0"
                 + "&beforemod=0";
@@ -439,7 +439,7 @@ public class CampusHttpGateway implements CampusGateway {
     }
 
     @Override
-    public HttpResponse<String> postResourceEdit(Map<String, String> params) throws IOException, InterruptedException {
+    public HttpResponse<String> postCourseModEdit(Map<String, String> params) throws IOException, InterruptedException {
         String url = properties.baseUrl() + "/course/modedit.php";
         return sessionHttpClient.postForm(url, encodeForm(params));
     }

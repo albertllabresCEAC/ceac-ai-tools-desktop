@@ -48,7 +48,7 @@ public class CreateCoursePdfResourceUseCase {
         validateRequest(courseId, request);
 
         try {
-            HttpResponse<String> formResponse = campusGateway.getResourceModEditForm(courseId, request.section().toString());
+            HttpResponse<String> formResponse = campusGateway.getCourseModEditForm(courseId, request.section().toString(), "resource");
             ensureAuthenticated(formResponse, "resource_form_auth_failed");
 
             ResourceModEditFormData formData = parser.parse(formResponse.body(), properties.baseUrl());
@@ -83,7 +83,7 @@ public class CreateCoursePdfResourceUseCase {
             }
 
             Map<String, String> params = buildResourceParams(courseId, request, formData);
-            HttpResponse<String> createResponse = campusGateway.postResourceEdit(params);
+            HttpResponse<String> createResponse = campusGateway.postCourseModEdit(params);
             ensureAuthenticated(createResponse, "resource_create_auth_failed");
             validateCreateResponse(createResponse);
 

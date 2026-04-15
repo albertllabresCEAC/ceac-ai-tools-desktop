@@ -1,6 +1,7 @@
 package tools.ceac.ai.modules.campus.interfaces.mcp;
 
 import tools.ceac.ai.modules.campus.application.service.CampusSessionService;
+import tools.ceac.ai.modules.campus.application.service.CreateCourseAssignmentUseCase;
 import tools.ceac.ai.modules.campus.application.service.CreateCoursePdfResourceUseCase;
 import tools.ceac.ai.modules.campus.application.service.CreateQuestionInBankUseCase;
 import tools.ceac.ai.modules.campus.application.service.CreateQuizMultichoiceQuestionUseCase;
@@ -34,6 +35,8 @@ import tools.ceac.ai.modules.campus.application.service.UpdateQuizQuestionUseCas
 import tools.ceac.ai.modules.campus.domain.model.ConversationDetail;
 import tools.ceac.ai.modules.campus.domain.model.CourseDetail;
 import tools.ceac.ai.modules.campus.domain.model.DashboardSnapshot;
+import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCourseAssignmentRequest;
+import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCourseAssignmentResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCoursePdfResourceRequest;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCoursePdfResourceResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.DeleteQuizSlotResponse;
@@ -72,6 +75,7 @@ public class CampusMcpTools {
     private final GetQuizStructureUseCase getQuizStructureUseCase;
     private final GetQuizQuestionCategoriesUseCase getQuizQuestionCategoriesUseCase;
     private final GetQuizQuestionUseCase getQuizQuestionUseCase;
+    private final CreateCourseAssignmentUseCase createCourseAssignmentUseCase;
     private final CreateCoursePdfResourceUseCase createCoursePdfResourceUseCase;
     private final CreateQuizMultichoiceQuestionUseCase createQuizMultichoiceQuestionUseCase;
     private final CreateQuestionInBankUseCase createQuestionInBankUseCase;
@@ -105,6 +109,7 @@ public class CampusMcpTools {
             GetQuizStructureUseCase getQuizStructureUseCase,
             GetQuizQuestionCategoriesUseCase getQuizQuestionCategoriesUseCase,
             GetQuizQuestionUseCase getQuizQuestionUseCase,
+            CreateCourseAssignmentUseCase createCourseAssignmentUseCase,
             CreateCoursePdfResourceUseCase createCoursePdfResourceUseCase,
             CreateQuizMultichoiceQuestionUseCase createQuizMultichoiceQuestionUseCase,
             CreateQuestionInBankUseCase createQuestionInBankUseCase,
@@ -136,6 +141,7 @@ public class CampusMcpTools {
         this.getQuizStructureUseCase = getQuizStructureUseCase;
         this.getQuizQuestionCategoriesUseCase = getQuizQuestionCategoriesUseCase;
         this.getQuizQuestionUseCase = getQuizQuestionUseCase;
+        this.createCourseAssignmentUseCase = createCourseAssignmentUseCase;
         this.createCoursePdfResourceUseCase = createCoursePdfResourceUseCase;
         this.createQuizMultichoiceQuestionUseCase = createQuizMultichoiceQuestionUseCase;
         this.createQuestionInBankUseCase = createQuestionInBankUseCase;
@@ -182,6 +188,17 @@ public class CampusMcpTools {
     @Tool(description = "Perfil completo de un usuario (alumno) por su userId: nombre, email, paÃ­s, cursos matriculados y accesos.")
     public Object getUserProfile(String userId) {
         return getUserProfileUseCase.execute(userId);
+    }
+
+    @Tool(description = """
+            Crea una nueva tarea en una seccion de un curso sin subir documentos adjuntos.
+            Requiere courseId y un request con section y name.
+            Opcionales en request: description, activityInstructions, availableFrom, dueAt, cutoffAt, gradingDueAt,
+            visible, showDescription, alwaysShowDescription, sendNotifications, sendLateNotifications y sendStudentNotifications.
+            Las fechas aceptan formato ISO-8601 local como 2026-04-30T23:59 o con zona horaria.
+            ANTES DE EJECUTAR: muestra al usuario un resumen del curso, la seccion, el nombre de la tarea y las fechas, y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
+    public CreateCourseAssignmentResponse createAssignment(String courseId, CreateCourseAssignmentRequest request) {
+        return createCourseAssignmentUseCase.execute(courseId, request);
     }
 
     @Tool(description = """
