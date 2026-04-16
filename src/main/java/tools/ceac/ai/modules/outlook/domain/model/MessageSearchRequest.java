@@ -1,9 +1,16 @@
 package tools.ceac.ai.modules.outlook.domain.model;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import org.springframework.ai.tool.annotation.ToolParam;
+
+import java.io.IOException;
 
 public class MessageSearchRequest {
 
@@ -30,6 +37,7 @@ public class MessageSearchRequest {
     private String since;
 
     @Schema(description = "Optional wrapper for MCP/API clients that send the payload as {\"request\": {...}}.")
+    @JsonDeserialize(using = MessageSearchRequest.NestedRequestDeserializer.class)
     private MessageSearchRequest request;
 
     public String getQuery() {
@@ -85,5 +93,28 @@ public class MessageSearchRequest {
             return null;
         }
         return extractor.apply(request);
+    }
+
+    /**
+     * Lenient deserializer for the nested {@code request} wrapper field.
+     *
+     * <p>Some MCP clients send the entire search payload wrapped inside a {@code "request"} key,
+     * e.g. {@code {"request": {"query": "foo", ...}}}. To support that contract the
+     * {@link MessageSearchRequest} class contains a self-referential {@code request} field.</p>
+     *
+     * <p>Without this deserializer, tooling such as Swagger UI that auto-fills placeholder values
+     * (e.g. {@code "request": "string"}) would cause a 500 because Jackson cannot coerce a JSON
+     * string into a {@link MessageSearchRequest} object. This class silently returns {@code null}
+     * for any non-object token, making the field effectively optional and fault-tolerant.</p>
+     */
+    static class NestedRequestDeserializer extends JsonDeserializer<MessageSearchRequest> {
+        @Override
+        public MessageSearchRequest deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+            if (p.currentToken() != JsonToken.START_OBJECT) {
+                p.skipChildren();
+                return null;
+            }
+            return ctxt.readValue(p, MessageSearchRequest.class);
+        }
     }
 }

@@ -86,6 +86,8 @@ public interface CampusGateway {
 
     HttpResponse<String> getUserProfile(String userId) throws IOException, InterruptedException;
 
+    HttpResponse<String> getAssignModEdit(String cmid) throws IOException, InterruptedException;
+
     HttpResponse<String> getQuizModEdit(String cmid) throws IOException, InterruptedException;
 
     HttpResponse<String> getQuizEdit(String cmid) throws IOException, InterruptedException;

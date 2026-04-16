@@ -377,6 +377,12 @@ public class CampusHttpGateway implements CampusGateway {
     }
 
     @Override
+    public HttpResponse<String> getAssignModEdit(String cmid) throws IOException, InterruptedException {
+        String url = properties.baseUrl() + "/course/modedit.php?update=" + cmid + "&return=1";
+        return sessionHttpClient.get(url);
+    }
+
+    @Override
     public HttpResponse<String> getQuizModEdit(String cmid) throws IOException, InterruptedException {
         String url = properties.baseUrl() + "/course/modedit.php?update=" + cmid + "&return=1";
         return sessionHttpClient.get(url);

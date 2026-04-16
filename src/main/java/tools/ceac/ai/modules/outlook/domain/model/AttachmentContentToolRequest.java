@@ -11,7 +11,7 @@ public class AttachmentContentToolRequest {
     private String entryId;
 
     @Min(0)
-    @ToolParam(description = "Zero-based attachment index. Use listAttachments first to discover the valid index values.")
+    @ToolParam(description = "1-based attachment index as returned by listAttachments. Use listAttachments first to discover the valid values.")
     private Integer attachmentIndex;
 
     public String getEntryId() {

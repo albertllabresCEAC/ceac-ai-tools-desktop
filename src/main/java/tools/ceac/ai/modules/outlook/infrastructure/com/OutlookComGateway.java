@@ -53,10 +53,34 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * COM-backed implementation of the Outlook gateway.
+ * COM-backed implementation of {@link OutlookGateway} using the JACOB library to communicate
+ * with the locally installed Outlook Desktop application via the Windows COM/MAPI interface.
  *
- * <p>This class contains the Outlook/JACOB specifics. The rest of the module talks to it through
- * the {@code OutlookGateway} port.
+ * <h2>Performance strategy</h2>
+ * <ul>
+ *   <li><strong>Server-side filtering</strong> — {@code listMessages} and {@code searchMessages}
+ *       apply a DASL filter ({@code @SQL=...}) via {@code Items.Restrict()} or
+ *       {@code MAPIFolder.GetTable(filter)} before iterating any item. This ensures that Outlook
+ *       itself narrows the candidate set by {@code ReceivedTime} and {@code UnRead} state, so only
+ *       matching items cross the COM boundary.</li>
+ *   <li><strong>Lightweight listing</strong> — {@code listMessages} reads body and attachment
+ *       metadata per item but deliberately skips {@code htmlBody}, {@code bcc} and {@code sentAt},
+ *       which are not available from the Table API and require a heavier per-item load.</li>
+ *   <li><strong>Lazy body resolution</strong> — {@code matchesSearchQuery} checks cheap scalar
+ *       properties ({@code Subject}, {@code SenderName}, {@code SenderEmailAddress}, {@code To},
+ *       {@code CC}) before falling back to {@code readBodyText}, which may issue up to six COM
+ *       round-trips. Short-circuit evaluation ensures the body is only read when earlier checks
+ *       all miss.</li>
+ *   <li><strong>Cached reflection</strong> — {@code Variant} method handles are resolved once at
+ *       class load time and reused, avoiding repeated {@link Class#getMethod} lookups in the
+ *       hot date-conversion path.</li>
+ * </ul>
+ *
+ * <h2>Date format for DASL filters</h2>
+ * All date filters sent to Outlook use the locale-independent DASL property
+ * {@code "urn:schemas:httpmail:date"} with a UTC timestamp in
+ * {@code yyyy-MM-dd HH:mm:ss} format. This avoids locale-specific JET filter failures on
+ * non-US Windows installations.
  */
 @Service
 public class OutlookComGateway implements OutlookGateway {
@@ -79,8 +103,12 @@ public class OutlookComGateway implements OutlookGateway {
             "SenderEmailAddress",
             "ReceivedTime",
             "UnRead",
-            "Size"
+            "Size",
+            "To",
+            "CC"
     );
+    private static final DateTimeFormatter RESTRICT_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final List<DateTimeFormatter> OUTLOOK_DATE_FORMATS = List.of(
             DateTimeFormatter.ofPattern("M/d/yyyy h:mm:ss a", Locale.US),
             DateTimeFormatter.ofPattern("M/d/yyyy h:mm a", Locale.US),
@@ -91,6 +119,17 @@ public class OutlookComGateway implements OutlookGateway {
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss", Locale.US),
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS", Locale.US)
     );
+
+    private static final Method VARIANT_TO_JAVA_OBJECT = resolveVariantMethod("toJavaObject");
+    private static final Method VARIANT_GET_DATE = resolveVariantMethod("getDate");
+
+    private static Method resolveVariantMethod(String name) {
+        try {
+            return Variant.class.getMethod(name);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
 
     private final OutlookProperties properties;
     private final JacobLibraryService jacobLibraryService;
@@ -712,8 +751,11 @@ public class OutlookComGateway implements OutlookGateway {
     }
 
     private Object invokeVariantMethod(Variant variant, String methodName) {
+        Method method = "toJavaObject".equals(methodName) ? VARIANT_TO_JAVA_OBJECT
+                : "getDate".equals(methodName) ? VARIANT_GET_DATE
+                : null;
+        if (method == null) return null;
         try {
-            Method method = Variant.class.getMethod(methodName);
             return method.invoke(variant);
         } catch (Exception ignored) {
             return null;
@@ -747,7 +789,10 @@ public class OutlookComGateway implements OutlookGateway {
             boolean unreadOnly,
             boolean descending
     ) {
-        Dispatch table = Dispatch.call(folder, "GetTable").toDispatch();
+        String filter = buildRestrictFilter(since, unreadOnly);
+        Dispatch table = filter != null
+                ? Dispatch.call(folder, "GetTable", filter).toDispatch()
+                : Dispatch.call(folder, "GetTable").toDispatch();
         Dispatch columns = Dispatch.get(table, "Columns").toDispatch();
         Dispatch.call(columns, "RemoveAll");
         for (String column : TABLE_COLUMNS) {
@@ -755,7 +800,6 @@ public class OutlookComGateway implements OutlookGateway {
         }
         Dispatch.call(table, "Sort", "[ReceivedTime]", new Variant(descending));
 
-        String storeId = resolveStoreId(folder);
         List<MailMessage> result = new ArrayList<>(limit);
         while (!Dispatch.get(table, "EndOfTable").getBoolean() && result.size() < limit) {
             Dispatch row = Dispatch.call(table, "GetNextRow").toDispatch();
@@ -767,30 +811,20 @@ public class OutlookComGateway implements OutlookGateway {
                 }
                 continue;
             }
+            String to = safeRowString(row, "To");
+            String cc = safeRowString(row, "CC");
             String entryId = safeRowString(row, "EntryID");
-            String to = null;
-            String cc = null;
-            String bcc = null;
-            String body = "";
+            String body = null;
             List<AttachmentInfo> attachments = List.of();
             if (StringUtils.hasText(entryId)) {
                 try {
-                    List<String> candidates = StringUtils.hasText(storeId) ? List.of(storeId) : List.of();
-                    Dispatch item = getItemFromId(namespace, entryId, candidates);
-                    to = readRecipients(item, 1);
-                    cc = readRecipients(item, 2);
-                    bcc = readRecipients(item, 3);
+                    Dispatch item = getItemFromId(namespace, entryId, List.of());
                     body = readBodyText(item);
                     attachments = hasAttachments(item) ? readAttachments(item) : List.of();
                 } catch (Exception ignored) {
-                    to = null;
-                    cc = null;
-                    bcc = null;
-                    body = "";
-                    attachments = List.of();
                 }
             }
-            result.add(toMailMessageSummary(row, to, cc, bcc, body, attachments));
+            result.add(toMailMessageSummary(row, to, cc, null, body, attachments));
         }
         return result;
     }
@@ -803,12 +837,19 @@ public class OutlookComGateway implements OutlookGateway {
             boolean descending
     ) {
         Dispatch items = Dispatch.get(folder, "Items").toDispatch();
-        Dispatch.call(items, "Sort", "[ReceivedTime]", new Variant(descending));
+        String filter = buildRestrictFilter(since, unreadOnly);
+        Dispatch collection;
+        try {
+            collection = filter != null ? Dispatch.call(items, "Restrict", filter).toDispatch() : items;
+        } catch (Exception ignored) {
+            collection = items;
+        }
+        Dispatch.call(collection, "Sort", "[ReceivedTime]", new Variant(descending));
 
         List<MailMessage> result = new ArrayList<>();
-        int count = Dispatch.get(items, "Count").getInt();
+        int count = Dispatch.get(collection, "Count").getInt();
         for (int index = 1; index <= count && result.size() < limit; index++) {
-            Dispatch item = Dispatch.call(items, "Item", new Variant(index)).toDispatch();
+            Dispatch item = Dispatch.call(collection, "Item", new Variant(index)).toDispatch();
             if (!"IPM.Note".equalsIgnoreCase(safeString(item, "MessageClass"))) {
                 continue;
             }
@@ -820,7 +861,7 @@ public class OutlookComGateway implements OutlookGateway {
                 }
                 continue;
             }
-            result.add(toListMailMessageFromItem(item));
+            result.add(toMailMessageLight(item));
         }
         return result;
     }
@@ -834,13 +875,20 @@ public class OutlookComGateway implements OutlookGateway {
             OffsetDateTime since
     ) {
         Dispatch items = Dispatch.get(folder, "Items").toDispatch();
-        Dispatch.call(items, "Sort", "[ReceivedTime]", new Variant(true));
+        String filter = buildRestrictFilter(since, unreadOnly);
+        Dispatch collection;
+        try {
+            collection = filter != null ? Dispatch.call(items, "Restrict", filter).toDispatch() : items;
+        } catch (Exception ignored) {
+            collection = items;
+        }
+        Dispatch.call(collection, "Sort", "[ReceivedTime]", new Variant(true));
 
         List<MessageSearchResult> result = new ArrayList<>();
-        int count = Dispatch.get(items, "Count").getInt();
+        int count = Dispatch.get(collection, "Count").getInt();
         String storeId = resolveStoreId(folder);
         for (int index = 1; index <= count; index++) {
-            Dispatch item = Dispatch.call(items, "Item", new Variant(index)).toDispatch();
+            Dispatch item = Dispatch.call(collection, "Item", new Variant(index)).toDispatch();
             if (!"IPM.Note".equalsIgnoreCase(safeString(item, "MessageClass"))) {
                 continue;
             }
@@ -926,17 +974,46 @@ public class OutlookComGateway implements OutlookGateway {
         if (!StringUtils.hasText(normalizedQuery)) {
             return true;
         }
-        return containsIgnoreCase(safeStringOrNull(item, "Subject"), normalizedQuery)
-                || containsIgnoreCase(safeStringOrNull(item, "SenderName"), normalizedQuery)
-                || containsIgnoreCase(readSenderEmail(item), normalizedQuery)
-                || containsIgnoreCase(readRecipients(item, 1), normalizedQuery)
-                || containsIgnoreCase(readRecipients(item, 2), normalizedQuery)
-                || containsIgnoreCase(readRecipients(item, 3), normalizedQuery)
-                || containsIgnoreCase(readBodyText(item), normalizedQuery);
+        if (containsIgnoreCase(safeStringOrNull(item, "Subject"), normalizedQuery)) return true;
+        if (containsIgnoreCase(safeStringOrNull(item, "SenderName"), normalizedQuery)) return true;
+        if (containsIgnoreCase(safeStringOrNull(item, "SenderEmailAddress"), normalizedQuery)) return true;
+        if (containsIgnoreCase(safeStringOrNull(item, "To"), normalizedQuery)) return true;
+        if (containsIgnoreCase(safeStringOrNull(item, "CC"), normalizedQuery)) return true;
+        return containsIgnoreCase(readBodyText(item), normalizedQuery);
     }
 
     private boolean containsIgnoreCase(String value, String query) {
         return value != null && value.toLowerCase(Locale.ROOT).contains(query);
+    }
+
+    private String buildRestrictFilter(OffsetDateTime since, boolean unreadOnly) {
+        List<String> parts = new ArrayList<>();
+        if (since != null) {
+            String utcDate = since.withOffsetSameInstant(ZoneOffset.UTC).format(RESTRICT_DATE_FORMAT);
+            parts.add("\"urn:schemas:httpmail:date\" >= '" + utcDate + "'");
+        }
+        if (unreadOnly) {
+            parts.add("\"urn:schemas:httpmail:read\" = 0");
+        }
+        return parts.isEmpty() ? null : "@SQL=" + String.join(" AND ", parts);
+    }
+
+    private MailMessage toMailMessageLight(Dispatch item) {
+        return new MailMessage(
+                safeString(item, "EntryID"),
+                safeString(item, "Subject"),
+                safeString(item, "SenderName"),
+                safeStringOrNull(item, "SenderEmailAddress"),
+                safeStringOrNull(item, "To"),
+                safeStringOrNull(item, "CC"),
+                null,
+                readBodyText(item),
+                null,
+                safeBoolean(item, "UnRead"),
+                safeDate(item, "ReceivedTime"),
+                null,
+                hasAttachments(item) ? readAttachments(item) : List.of()
+        );
     }
 
     private MailMessage toListMailMessageFromItem(Dispatch item) {
@@ -959,29 +1036,18 @@ public class OutlookComGateway implements OutlookGateway {
     }
 
     private MessageSearchResult toSearchResult(Dispatch item, FolderType folderType) {
-        String body = readBodyText(item);
         return new MessageSearchResult(
                 safeString(item, "EntryID"),
                 folderType.name(),
                 safeString(item, "Subject"),
                 safeString(item, "SenderName"),
                 readSenderEmail(item),
-                buildSnippet(body),
+                readBodyText(item),
                 safeBoolean(item, "UnRead"),
                 safeDate(item, "ReceivedTime"),
-                safeDate(item, "SentOn")
+                safeDate(item, "SentOn"),
+                hasAttachments(item) ? readAttachments(item) : List.of()
         );
-    }
-
-    private String buildSnippet(String body) {
-        if (!StringUtils.hasText(body)) {
-            return null;
-        }
-        String normalized = body.replaceAll("\\s+", " ").trim();
-        if (normalized.length() <= 240) {
-            return normalized;
-        }
-        return normalized.substring(0, 237) + "...";
     }
 
     private OffsetDateTime sortTimestamp(MessageSearchResult result) {

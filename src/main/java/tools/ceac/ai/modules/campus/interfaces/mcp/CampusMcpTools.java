@@ -7,6 +7,7 @@ import tools.ceac.ai.modules.campus.application.service.CreateQuestionInBankUseC
 import tools.ceac.ai.modules.campus.application.service.CreateQuizMultichoiceQuestionUseCase;
 import tools.ceac.ai.modules.campus.application.service.DeleteQuizSlotUseCase;
 import tools.ceac.ai.modules.campus.application.service.DeleteQuizUserOverrideUseCase;
+import tools.ceac.ai.modules.campus.application.service.GetAssignDetailUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetAssignSubmissionFilesUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetAssignSubmissionsUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetConversationMessagesUseCase;
@@ -54,6 +55,7 @@ public class CampusMcpTools {
     private final GetCourseUseCase getCourseUseCase;
     private final GetCourseParticipantsUseCase getCourseParticipantsUseCase;
     private final GetUserProfileUseCase getUserProfileUseCase;
+    private final GetAssignDetailUseCase getAssignDetailUseCase;
     private final GetAssignSubmissionsUseCase getAssignSubmissionsUseCase;
     private final GetAssignSubmissionFilesUseCase getAssignSubmissionFilesUseCase;
     private final GetGradeUseCase getGradeUseCase;
@@ -88,6 +90,7 @@ public class CampusMcpTools {
             GetCourseUseCase getCourseUseCase,
             GetCourseParticipantsUseCase getCourseParticipantsUseCase,
             GetUserProfileUseCase getUserProfileUseCase,
+            GetAssignDetailUseCase getAssignDetailUseCase,
             GetAssignSubmissionsUseCase getAssignSubmissionsUseCase,
             GetAssignSubmissionFilesUseCase getAssignSubmissionFilesUseCase,
             GetGradeUseCase getGradeUseCase,
@@ -120,6 +123,7 @@ public class CampusMcpTools {
         this.getCourseUseCase = getCourseUseCase;
         this.getCourseParticipantsUseCase = getCourseParticipantsUseCase;
         this.getUserProfileUseCase = getUserProfileUseCase;
+        this.getAssignDetailUseCase = getAssignDetailUseCase;
         this.getAssignSubmissionsUseCase = getAssignSubmissionsUseCase;
         this.getAssignSubmissionFilesUseCase = getAssignSubmissionFilesUseCase;
         this.getGradeUseCase = getGradeUseCase;
@@ -230,6 +234,19 @@ public class CampusMcpTools {
     }
 
     // â”€â”€ TAREAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+    @Tool(description = """
+            Detalles de configuración de una tarea Moodle scrapeando modedit.php.
+            Devuelve: cmid, courseId, name, visible, description, activityInstructions, \
+            showDescription, alwaysShowDescription, \
+            availableFrom, dueAt, cutoffAt, gradingDueAt (fechas ISO-8601 locales "yyyy-MM-ddTHH:mm" o null si desactivadas), \
+            sendNotifications, sendLateNotifications, sendStudentNotifications, \
+            maxGrade, gradePass, maxAttempts (0 = ilimitados), attemptReopenMethod.
+            Requiere el cmid del módulo de tarea (no el assignmentId de la API de Moodle).
+            """)
+    public Object getAssignment(String cmid) {
+        return getAssignDetailUseCase.execute(cmid);
+    }
 
     @Tool(description = "Lista de entregas de alumnos para una tarea. Requiere el assignmentId (id del mÃ³dulo Moodle).")
     public Object getSubmissions(String assignmentId) {

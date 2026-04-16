@@ -1,11 +1,13 @@
 package tools.ceac.ai.modules.campus.interfaces.api;
 
 import io.swagger.v3.oas.annotations.Operation;
+import tools.ceac.ai.modules.campus.application.service.GetAssignDetailUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetAssignSubmissionFilesUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetAssignSubmissionsUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetGradeUseCase;
 import tools.ceac.ai.modules.campus.application.service.SubmitGradeUseCase;
 import tools.ceac.ai.modules.campus.application.service.CreateCourseAssignmentUseCase;
+import tools.ceac.ai.modules.campus.interfaces.api.dto.AssignDetailResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCourseAssignmentRequest;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.CreateCourseAssignmentResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.FileDownloadResponse;
@@ -32,6 +34,7 @@ import java.util.List;
 @RequestMapping("/api")
 public class AssignController {
 
+    private final GetAssignDetailUseCase getAssignDetailUseCase;
     private final GetAssignSubmissionsUseCase getAssignSubmissionsUseCase;
     private final GetAssignSubmissionFilesUseCase getAssignSubmissionFilesUseCase;
     private final GetGradeUseCase getGradeUseCase;
@@ -39,12 +42,14 @@ public class AssignController {
     private final CreateCourseAssignmentUseCase createCourseAssignmentUseCase;
 
     public AssignController(
+            GetAssignDetailUseCase getAssignDetailUseCase,
             GetAssignSubmissionsUseCase getAssignSubmissionsUseCase,
             GetAssignSubmissionFilesUseCase getAssignSubmissionFilesUseCase,
             GetGradeUseCase getGradeUseCase,
             SubmitGradeUseCase submitGradeUseCase,
             CreateCourseAssignmentUseCase createCourseAssignmentUseCase
     ) {
+        this.getAssignDetailUseCase = getAssignDetailUseCase;
         this.getAssignSubmissionsUseCase = getAssignSubmissionsUseCase;
         this.getAssignSubmissionFilesUseCase = getAssignSubmissionFilesUseCase;
         this.getGradeUseCase = getGradeUseCase;
@@ -80,6 +85,22 @@ public class AssignController {
                             }""")))
             @RequestBody CreateCourseAssignmentRequest request) {
         return createCourseAssignmentUseCase.execute(courseId, request);
+    }
+
+    @GetMapping("/assignments/{id}")
+    @Operation(summary = "Detalles de configuración de una tarea (cmid del módulo)")
+    public AssignDetailResponse assignDetail(
+            @Parameter(description = "ID del módulo de tarea Moodle (cmid)", example = "316309")
+            @PathVariable String id) {
+        var detail = getAssignDetailUseCase.execute(id);
+        return new AssignDetailResponse(
+                detail.cmid(), detail.courseId(), detail.name(), detail.visible(),
+                detail.description(), detail.activityInstructions(),
+                detail.showDescription(), detail.alwaysShowDescription(),
+                detail.availableFrom(), detail.dueAt(), detail.cutoffAt(), detail.gradingDueAt(),
+                detail.sendNotifications(), detail.sendLateNotifications(), detail.sendStudentNotifications(),
+                detail.maxGrade(), detail.gradePass(), detail.maxAttempts(), detail.attemptReopenMethod()
+        );
     }
 
     @GetMapping("/assignments/{id}/submissions")
