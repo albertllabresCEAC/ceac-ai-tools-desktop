@@ -1,5 +1,6 @@
 package tools.ceac.ai.modules.campus.interfaces.api;
 
+import io.swagger.v3.oas.annotations.Operation;
 import java.util.List;
 import tools.ceac.ai.modules.campus.application.service.GetMessageRecipientsUseCase;
 import tools.ceac.ai.modules.campus.application.service.SearchMessageRecipientsUseCase;
@@ -9,14 +10,19 @@ import tools.ceac.ai.modules.campus.interfaces.api.dto.CourseRefResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.MessageRecipientResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.UserProfileResponse;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * User-focused local HTTP endpoints for campus data.
+ */
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Campus Users", description = "Directory, search and profile endpoints for campus users")
 public class UserController {
 
     private final GetUserProfileUseCase getUserProfileUseCase;
@@ -32,6 +38,11 @@ public class UserController {
         this.searchMessageRecipientsUseCase = searchMessageRecipientsUseCase;
     }
 
+    /**
+     * Returns the full directory exposed by the campus messaging compose flow.
+     */
+    @Operation(summary = "List users",
+            description = "Returns the full user directory exposed by the messaging compose flow as a flat list of id and fullName.")
     @GetMapping("/users")
     public List<MessageRecipientResponse> users() {
         return getMessageRecipientsUseCase.execute()
@@ -40,6 +51,11 @@ public class UserController {
                 .toList();
     }
 
+    /**
+     * Searches users by free text through Moodle's messaging AJAX API.
+     */
+    @Operation(summary = "Search users",
+            description = "Searches users through Moodle's message search API and returns a flat list of id and fullName.")
     @GetMapping("/users/search")
     public List<MessageRecipientResponse> searchUsers(
             @Parameter(description = "Texto de busqueda para nombre o id de usuario", example = "Juan")
@@ -54,6 +70,11 @@ public class UserController {
                 .toList();
     }
 
+    /**
+     * Returns the profile details of a concrete Moodle user.
+     */
+    @Operation(summary = "Get user profile",
+            description = "Returns the extended profile of a Moodle user, including courses and access timestamps when available.")
     @GetMapping("/users/{id}/profile")
     public UserProfileResponse profile(
             @Parameter(description = "ID del usuario Moodle", example = "11681")

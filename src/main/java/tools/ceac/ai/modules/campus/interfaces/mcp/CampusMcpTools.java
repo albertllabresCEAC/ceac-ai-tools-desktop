@@ -370,16 +370,25 @@ public class CampusMcpTools {
         return "ok";
     }
 
+    /**
+     * Returns the full campus user directory exposed by the messaging compose flow.
+     */
     @Tool(description = "Lista de todos los alumnos de todos los cursos con su id y nombre completo (posibles destinatarios de mensajes).")
     public Object getMessageRecipients() {
         return getMessageRecipientsUseCase.execute();
     }
 
+    /**
+     * Alias of {@link #getMessageRecipients()} with a more generic user-directory naming.
+     */
     @Tool(description = "Lista de todos los alumnos de todos los cursos con su id y nombre completo. Equivale al listado completo de posibles destinatarios de mensajes.")
     public Object getAllUsers() {
         return getMessageRecipientsUseCase.execute();
     }
 
+    /**
+     * Searches users through Moodle's messaging AJAX API.
+     */
     @Tool(description = """
             Busca usuarios por texto usando la busqueda del campus.
             Requiere query no vacia.

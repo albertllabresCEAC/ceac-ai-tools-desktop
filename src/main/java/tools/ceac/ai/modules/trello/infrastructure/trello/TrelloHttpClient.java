@@ -149,6 +149,10 @@ public class TrelloHttpClient {
         return new TrelloOperationResult(true, "archive", "list", listId, "Lista archivada.");
     }
 
+    /**
+     * Reads Trello cards from a list and asks Trello to embed {@code customFieldItems} in the same
+     * response.
+     */
     public List<TrelloCardSummary> listCards(String listId) {
         return readList(
                 "/lists/" + encodePath(listId) + "/cards",
@@ -177,6 +181,10 @@ public class TrelloHttpClient {
         return sendObject("POST", "/cards", params, TrelloCardSummary.class);
     }
 
+    /**
+     * Reads a single Trello card and asks Trello to embed {@code customFieldItems} in the same
+     * response.
+     */
     public TrelloCardSummary getCard(String cardId) {
         return readObject(
                 "/cards/" + encodePath(cardId),

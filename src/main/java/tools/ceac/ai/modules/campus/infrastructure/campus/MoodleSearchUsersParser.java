@@ -9,7 +9,10 @@ import tools.ceac.ai.modules.campus.domain.model.MessageRecipient;
 import org.springframework.stereotype.Component;
 
 /**
- * Parses the JSON response from Moodle's core_message_message_search_users AJAX call.
+ * Parses the JSON response from Moodle's {@code core_message_message_search_users} AJAX call.
+ *
+ * <p>The runtime exposes a simplified directory shape and only keeps the Moodle user id and full
+ * name.
  */
 @Component
 public class MoodleSearchUsersParser {
@@ -20,6 +23,9 @@ public class MoodleSearchUsersParser {
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Parses only the {@code contacts} branch from the Moodle response.
+     */
     public List<MessageRecipient> parse(String json) throws IOException {
         AjaxResponse[] responses = objectMapper.readValue(json, AjaxResponse[].class);
         if (responses == null || responses.length == 0 || responses[0].data == null) {
@@ -60,6 +66,9 @@ public class MoodleSearchUsersParser {
         public String fullname;
     }
 
+    /**
+     * Parses and merges both {@code contacts} and {@code noncontacts} from Moodle's response.
+     */
     public List<MessageRecipient> parseMerged(String json) throws IOException {
         AjaxResponse[] responses = objectMapper.readValue(json, AjaxResponse[].class);
         if (responses == null || responses.length == 0 || responses[0].data == null) {

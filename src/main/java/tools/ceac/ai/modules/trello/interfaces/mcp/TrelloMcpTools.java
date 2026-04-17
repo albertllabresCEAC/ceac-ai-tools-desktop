@@ -121,6 +121,9 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.archiveList(listId));
     }
 
+    /**
+     * Returns the cards of a list with current custom field values embedded in the card payload.
+     */
     @Tool(description = """
             Lists the cards of a Trello list from its listId.
             The returned cards already include their current custom field values when present.
@@ -130,6 +133,9 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.listCards(listId));
     }
 
+    /**
+     * Returns a single card with current custom field values embedded in the card payload.
+     */
     @Tool(description = """
             Returns the current detail of a Trello card from its cardId, including current custom field values when present.
             Custom field definitions live at board level; to resolve field names, types and list options use listarCamposPersonalizadosTrello(boardId).

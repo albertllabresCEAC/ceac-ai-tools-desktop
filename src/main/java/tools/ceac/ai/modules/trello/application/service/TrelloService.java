@@ -100,6 +100,10 @@ public class TrelloService {
         return httpClient.archiveList(requireId(listId, "listId"));
     }
 
+    /**
+     * Returns the cards of a list with their current custom field values embedded when Trello
+     * returns them.
+     */
     public List<TrelloCardSummary> listCards(String listId) {
         return httpClient.listCards(requireId(listId, "listId"));
     }
@@ -108,6 +112,10 @@ public class TrelloService {
         return httpClient.createCard(request);
     }
 
+    /**
+     * Returns the current detail of a card with its current custom field values embedded when
+     * present.
+     */
     public TrelloCardSummary getCard(String cardId) {
         return httpClient.getCard(requireId(cardId, "cardId"));
     }

@@ -1,5 +1,7 @@
 package tools.ceac.ai.modules.campus.interfaces.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import tools.ceac.ai.modules.campus.application.service.GetConversationMessagesUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetConversationsUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetMessageRecipientsUseCase;
@@ -28,8 +30,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * Local HTTP endpoints related to campus messaging.
+ */
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Campus Messages", description = "Conversation, recipient and messaging endpoints")
 public class MessagesController {
 
     private final GetConversationsUseCase getConversationsUseCase;
@@ -143,6 +149,11 @@ public class MessagesController {
                 .toList();
     }
 
+    /**
+     * Returns the full message-recipient directory exposed by the compose form.
+     */
+    @Operation(summary = "List message users",
+            description = "Returns the full flat directory of message recipients as id and fullName.")
     @GetMapping("/messages/users")
     public List<MessageRecipientResponse> users() {
         return getMessageRecipientsUseCase.execute()
@@ -151,6 +162,11 @@ public class MessagesController {
                 .toList();
     }
 
+    /**
+     * Searches users by free text through Moodle's messaging AJAX API.
+     */
+    @Operation(summary = "Search message users",
+            description = "Searches users through Moodle's message search API and returns a flat list of id and fullName.")
     @GetMapping("/messages/users/search")
     public List<MessageRecipientResponse> searchUsers(
             @Parameter(description = "Texto de busqueda para nombre o id de usuario", example = "Juan")

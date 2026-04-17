@@ -364,6 +364,9 @@ public class CampusHttpGateway implements CampusGateway {
         return sessionHttpClient.postForm(url, body);
     }
 
+    /**
+     * Calls Moodle's AJAX search endpoint used by messaging to resolve users by free text.
+     */
     @Override
     public HttpResponse<String> searchMessageUsers(String userId, String sesskey, String search, int limitNum, int limitFrom)
             throws IOException, InterruptedException {

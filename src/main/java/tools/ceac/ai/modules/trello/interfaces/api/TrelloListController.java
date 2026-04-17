@@ -56,6 +56,9 @@ public class TrelloListController {
         return trelloService.archiveList(listId);
     }
 
+    /**
+     * Returns the cards of a list including current custom field values when present.
+     */
     @Operation(summary = "List list cards",
             description = "Returns the cards of a given list, always including the current custom field values for each card when present.")
     @GetMapping("/lists/{listId}/cards")

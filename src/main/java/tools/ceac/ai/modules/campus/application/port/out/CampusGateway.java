@@ -77,6 +77,12 @@ public interface CampusGateway {
 
     HttpResponse<String> postComposeAllCourses(String sesskey) throws IOException, InterruptedException;
 
+    /**
+     * Calls Moodle's messaging user search AJAX endpoint for the current authenticated user.
+     *
+     * <p>The raw JSON response contains separated {@code contacts} and {@code noncontacts} lists
+     * that are merged later by the parser layer.
+     */
     HttpResponse<String> searchMessageUsers(String userId, String sesskey, String search, int limitNum, int limitFrom)
             throws IOException, InterruptedException;
 

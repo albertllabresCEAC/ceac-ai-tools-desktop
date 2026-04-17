@@ -10,7 +10,11 @@ import tools.ceac.ai.modules.campus.infrastructure.campus.MoodleSearchUsersParse
 import org.springframework.stereotype.Service;
 
 /**
- * Searches campus users via Moodle's core_message_message_search_users AJAX API.
+ * Searches campus users via Moodle's {@code core_message_message_search_users} AJAX API.
+ *
+ * <p>This use case is intentionally different from the full recipient listing flow. It does not
+ * scrape the compose form selector. Instead it executes Moodle's server-side search and maps the
+ * result to the simplified {@link MessageRecipient} shape used by local API and MCP endpoints.
  */
 @Service
 public class SearchMessageRecipientsUseCase {
@@ -31,10 +35,19 @@ public class SearchMessageRecipientsUseCase {
         this.parser = parser;
     }
 
+    /**
+     * Executes the search with Moodle's default pagination used by this runtime.
+     */
     public List<MessageRecipient> execute(String query) {
         return execute(query, 51, 0);
     }
 
+    /**
+     * Executes the search with explicit pagination.
+     *
+     * <p>The current authenticated user id and sesskey are taken from the active campus session
+     * and dashboard snapshot.
+     */
     public List<MessageRecipient> execute(String query, int limitNum, int limitFrom) {
         String normalizedQuery = query == null ? "" : query.trim();
         if (normalizedQuery.isBlank()) {
