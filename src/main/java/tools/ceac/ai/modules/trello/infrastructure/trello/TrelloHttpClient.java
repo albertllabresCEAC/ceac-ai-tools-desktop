@@ -14,20 +14,31 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Component;
+import tools.ceac.ai.modules.trello.domain.model.CreateCustomFieldOptionRequest;
+import tools.ceac.ai.modules.trello.domain.model.CreateCustomFieldRequest;
+import tools.ceac.ai.modules.trello.domain.model.CreateTrelloBoardRequest;
 import tools.ceac.ai.modules.trello.domain.model.CreateTrelloCheckItemRequest;
 import tools.ceac.ai.modules.trello.domain.model.CreateTrelloChecklistRequest;
 import tools.ceac.ai.modules.trello.application.auth.TrelloRuntimeCredentials;
 import tools.ceac.ai.modules.trello.domain.model.CreateTrelloCardRequest;
+import tools.ceac.ai.modules.trello.domain.model.CreateTrelloListRequest;
 import tools.ceac.ai.modules.trello.domain.model.TrelloBoardSummary;
 import tools.ceac.ai.modules.trello.domain.model.TrelloCardSummary;
 import tools.ceac.ai.modules.trello.domain.model.TrelloCheckItemSummary;
 import tools.ceac.ai.modules.trello.domain.model.TrelloChecklistSummary;
+import tools.ceac.ai.modules.trello.domain.model.TrelloCustomFieldDefinition;
+import tools.ceac.ai.modules.trello.domain.model.TrelloCustomFieldItem;
+import tools.ceac.ai.modules.trello.domain.model.TrelloCustomFieldOption;
 import tools.ceac.ai.modules.trello.domain.model.TrelloListSummary;
 import tools.ceac.ai.modules.trello.domain.model.TrelloMemberProfile;
 import tools.ceac.ai.modules.trello.domain.model.TrelloOperationResult;
+import tools.ceac.ai.modules.trello.domain.model.UpdateCustomFieldItemRequest;
+import tools.ceac.ai.modules.trello.domain.model.UpdateCustomFieldRequest;
+import tools.ceac.ai.modules.trello.domain.model.UpdateTrelloBoardRequest;
 import tools.ceac.ai.modules.trello.domain.model.UpdateTrelloCardRequest;
 import tools.ceac.ai.modules.trello.domain.model.UpdateTrelloCheckItemRequest;
 import tools.ceac.ai.modules.trello.domain.model.UpdateTrelloChecklistRequest;
+import tools.ceac.ai.modules.trello.domain.model.UpdateTrelloListRequest;
 
 @Component
 public class TrelloHttpClient {
@@ -62,6 +73,41 @@ public class TrelloHttpClient {
         );
     }
 
+    public TrelloBoardSummary getBoard(String boardId) {
+        return readObject(
+                "/boards/" + encodePath(boardId),
+                Map.of("fields", "id,name,desc,url,closed"),
+                TrelloBoardSummary.class
+        );
+    }
+
+    public TrelloBoardSummary createBoard(CreateTrelloBoardRequest request) {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("name", request.name());
+        if (request.desc() != null && !request.desc().isBlank()) {
+            params.put("desc", request.desc());
+        }
+        if (request.defaultLists() != null) {
+            params.put("defaultLists", request.defaultLists().toString());
+        }
+        return sendObject("POST", "/boards", params, TrelloBoardSummary.class);
+    }
+
+    public TrelloBoardSummary updateBoard(String boardId, UpdateTrelloBoardRequest request) {
+        Map<String, String> params = new LinkedHashMap<>();
+        putIfDefined(params, "name", request.name());
+        putIfDefined(params, "desc", request.desc());
+        if (request.closed() != null) {
+            params.put("closed", request.closed().toString());
+        }
+        return sendObject("PUT", "/boards/" + encodePath(boardId), params, TrelloBoardSummary.class);
+    }
+
+    public TrelloOperationResult closeBoard(String boardId) {
+        sendObject("PUT", "/boards/" + encodePath(boardId), Map.of("closed", "true"), TrelloBoardSummary.class);
+        return new TrelloOperationResult(true, "close", "board", boardId, "Tablero cerrado.");
+    }
+
     public List<TrelloListSummary> listLists(String boardId) {
         return readList(
                 "/boards/" + encodePath(boardId) + "/lists",
@@ -69,6 +115,38 @@ public class TrelloHttpClient {
                 new TypeReference<>() {
                 }
         );
+    }
+
+    public TrelloListSummary getList(String listId) {
+        return readObject(
+                "/lists/" + encodePath(listId),
+                Map.of("fields", "id,idBoard,name,closed,pos"),
+                TrelloListSummary.class
+        );
+    }
+
+    public TrelloListSummary createList(CreateTrelloListRequest request) {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("idBoard", request.boardId());
+        params.put("name", request.name());
+        putIfNonBlank(params, "pos", request.position());
+        return sendObject("POST", "/lists", params, TrelloListSummary.class);
+    }
+
+    public TrelloListSummary updateList(String listId, UpdateTrelloListRequest request) {
+        Map<String, String> params = new LinkedHashMap<>();
+        putIfDefined(params, "name", request.name());
+        if (request.closed() != null) {
+            params.put("closed", request.closed().toString());
+        }
+        putIfNonBlank(params, "pos", request.position());
+        putIfNonBlank(params, "idBoard", request.boardId());
+        return sendObject("PUT", "/lists/" + encodePath(listId), params, TrelloListSummary.class);
+    }
+
+    public TrelloOperationResult archiveList(String listId) {
+        sendObject("PUT", "/lists/" + encodePath(listId), Map.of("closed", "true"), TrelloListSummary.class);
+        return new TrelloOperationResult(true, "archive", "list", listId, "Lista archivada.");
     }
 
     public List<TrelloCardSummary> listCards(String listId) {
@@ -215,8 +293,127 @@ public class TrelloHttpClient {
         return new TrelloOperationResult(true, "delete", "checkItem", checkItemId, "Item de checklist eliminado.");
     }
 
+    // ── Custom Fields ────────────────────────────────────────────────────────
+
+    public List<TrelloCustomFieldDefinition> listCustomFields(String boardId) {
+        return readList(
+                "/boards/" + encodePath(boardId) + "/customFields",
+                Map.of(),
+                new TypeReference<>() {}
+        );
+    }
+
+    public TrelloCustomFieldDefinition createCustomField(CreateCustomFieldRequest request) {
+        Map<String, String> params = new LinkedHashMap<>();
+        params.put("idModel", request.boardId());
+        params.put("modelType", "board");
+        params.put("name", request.name());
+        params.put("type", request.type());
+        putIfNonBlank(params, "pos", request.position());
+        if (request.displayCardFront() != null) {
+            params.put("display_cardFront", request.displayCardFront().toString());
+        }
+        return sendObject("POST", "/customFields", params, TrelloCustomFieldDefinition.class);
+    }
+
+    public TrelloCustomFieldDefinition updateCustomField(String customFieldId, UpdateCustomFieldRequest request) {
+        Map<String, String> params = new LinkedHashMap<>();
+        putIfDefined(params, "name", request.name());
+        putIfNonBlank(params, "pos", request.position());
+        if (request.displayCardFront() != null) {
+            params.put("display/cardFront", request.displayCardFront().toString());
+        }
+        return sendObject("PUT", "/customFields/" + encodePath(customFieldId), params, TrelloCustomFieldDefinition.class);
+    }
+
+    public TrelloOperationResult deleteCustomField(String customFieldId) {
+        sendWithoutBody("DELETE", "/customFields/" + encodePath(customFieldId), Map.of());
+        return new TrelloOperationResult(true, "delete", "customField", customFieldId, "Campo personalizado eliminado.");
+    }
+
+    public TrelloCustomFieldOption createCustomFieldOption(String customFieldId, CreateCustomFieldOptionRequest request) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("value", Map.of("text", request.text()));
+        if (request.color() != null && !request.color().isBlank()) {
+            body.put("color", request.color());
+        }
+        if (request.position() != null && !request.position().isBlank()) {
+            body.put("pos", request.position());
+        }
+        return sendJsonBody("POST", "/customFields/" + encodePath(customFieldId) + "/options", body, TrelloCustomFieldOption.class);
+    }
+
+    public TrelloOperationResult deleteCustomFieldOption(String customFieldId, String optionId) {
+        sendWithoutBody("DELETE", "/customFields/" + encodePath(customFieldId) + "/options/" + encodePath(optionId), Map.of());
+        return new TrelloOperationResult(true, "delete", "customFieldOption", optionId, "Opción de campo personalizado eliminada.");
+    }
+
+    public List<TrelloCustomFieldItem> listCardCustomFieldItems(String cardId) {
+        return readList(
+                "/cards/" + encodePath(cardId) + "/customFieldItems",
+                Map.of(),
+                new TypeReference<>() {}
+        );
+    }
+
+    public TrelloCustomFieldItem updateCardCustomFieldItem(String cardId, String customFieldId,
+            UpdateCustomFieldItemRequest request) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        if (request.clear()) {
+            body.put("value", Map.of());
+        } else if (request.idValue() != null) {
+            body.put("idValue", request.idValue());
+        } else {
+            Map<String, String> value = new LinkedHashMap<>();
+            if (request.text() != null) {
+                value.put("text", request.text());
+            }
+            if (request.number() != null) {
+                value.put("number", request.number());
+            }
+            if (request.date() != null) {
+                value.put("date", request.date());
+            }
+            if (request.checked() != null) {
+                value.put("checked", request.checked().toString());
+            }
+            body.put("value", value);
+        }
+        return sendJsonBody(
+                "PUT",
+                "/cards/" + encodePath(cardId) + "/customField/" + encodePath(customFieldId) + "/item",
+                body,
+                TrelloCustomFieldItem.class
+        );
+    }
+
     private <T> T readObject(String path, Map<String, String> params, Class<T> type) {
         return sendObject("GET", path, params, type);
+    }
+
+    private <T> T sendJsonBody(String method, String path, Object body, Class<T> type) {
+        try {
+            String json = objectMapper.writeValueAsString(body);
+            credentials.assertConfigured();
+            URI uri = URI.create(credentials.apiBaseUrl() + path + "?" + buildQuery(Map.of()));
+            HttpRequest.Builder builder = HttpRequest.newBuilder(uri)
+                    .timeout(Duration.ofSeconds(30))
+                    .header("Accept", "application/json")
+                    .header("Content-Type", "application/json");
+            if ("PUT".equalsIgnoreCase(method)) {
+                builder.PUT(HttpRequest.BodyPublishers.ofString(json));
+            } else {
+                builder.POST(HttpRequest.BodyPublishers.ofString(json));
+            }
+            HttpResponse<String> response = httpClient.send(
+                    builder.build(),
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+            ensureSuccess(response);
+            return objectMapper.readValue(response.body(), type);
+        } catch (Exception exception) {
+            throw new IllegalStateException("No he podido consultar Trello: " + exception.getMessage(), exception);
+        }
     }
 
     private <T> List<T> readList(String path, Map<String, String> params, TypeReference<List<T>> type) {
