@@ -101,7 +101,7 @@ public class TrelloService {
     }
 
     public List<TrelloCardSummary> listCards(String listId) {
-        return httpClient.listCards(listId);
+        return httpClient.listCards(requireId(listId, "listId"));
     }
 
     public TrelloCardSummary createCard(CreateTrelloCardRequest request) {

@@ -365,6 +365,20 @@ public class CampusHttpGateway implements CampusGateway {
     }
 
     @Override
+    public HttpResponse<String> searchMessageUsers(String userId, String sesskey, String search, int limitNum, int limitFrom)
+            throws IOException, InterruptedException {
+        String url = properties.baseUrl() + "/lib/ajax/service.php?sesskey=" + sesskey
+                + "&info=core_message_message_search_users";
+        String escapedSearch = search == null ? "" : search.replace("\\", "\\\\").replace("\"", "\\\"");
+        String body = "[{\"index\":0,\"methodname\":\"core_message_message_search_users\","
+                + "\"args\":{\"userid\":\"" + userId + "\","
+                + "\"search\":\"" + escapedSearch + "\","
+                + "\"limitnum\":" + limitNum + ","
+                + "\"limitfrom\":" + limitFrom + "}}]";
+        return sessionHttpClient.post(url, body);
+    }
+
+    @Override
     public HttpResponse<String> getCourseParticipants(String courseId) throws IOException, InterruptedException {
         String url = properties.baseUrl() + "/user/index.php?id=" + courseId + "&perpage=5000";
         return sessionHttpClient.get(url);

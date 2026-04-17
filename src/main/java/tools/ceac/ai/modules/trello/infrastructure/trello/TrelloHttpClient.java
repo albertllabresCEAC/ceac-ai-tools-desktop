@@ -152,7 +152,10 @@ public class TrelloHttpClient {
     public List<TrelloCardSummary> listCards(String listId) {
         return readList(
                 "/lists/" + encodePath(listId) + "/cards",
-                Map.of("fields", "id,idBoard,idList,name,desc,url,closed,due,dueComplete,pos,idMembers"),
+                Map.of(
+                        "fields", "id,idBoard,idList,name,desc,url,closed,due,dueComplete,pos,idMembers",
+                        "customFieldItems", "true"
+                ),
                 new TypeReference<>() {
                 }
         );
@@ -177,7 +180,10 @@ public class TrelloHttpClient {
     public TrelloCardSummary getCard(String cardId) {
         return readObject(
                 "/cards/" + encodePath(cardId),
-                Map.of("fields", "id,idBoard,idList,name,desc,url,closed,due,dueComplete,pos,idMembers"),
+                Map.of(
+                        "fields", "id,idBoard,idList,name,desc,url,closed,due,dueComplete,pos,idMembers",
+                        "customFieldItems", "true"
+                ),
                 TrelloCardSummary.class
         );
     }

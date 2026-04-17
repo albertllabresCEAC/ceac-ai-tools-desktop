@@ -29,7 +29,8 @@ public class TrelloCardController {
         this.trelloService = trelloService;
     }
 
-    @Operation(summary = "Get card", description = "Returns the current detail of a Trello card.")
+    @Operation(summary = "Get card",
+            description = "Returns the current detail of a Trello card, including the current custom field values when present.")
     @GetMapping("/cards/{cardId}")
     public TrelloCardSummary card(@PathVariable String cardId) {
         return trelloService.getCard(cardId);

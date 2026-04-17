@@ -30,6 +30,7 @@ import tools.ceac.ai.modules.campus.application.service.MarkConversationAsReadUs
 import tools.ceac.ai.modules.campus.application.service.ReplyToMessageUseCase;
 import tools.ceac.ai.modules.campus.application.service.SaveQuizCommentUseCase;
 import tools.ceac.ai.modules.campus.application.service.SaveQuizUserOverrideUseCase;
+import tools.ceac.ai.modules.campus.application.service.SearchMessageRecipientsUseCase;
 import tools.ceac.ai.modules.campus.application.service.SendNewMessageUseCase;
 import tools.ceac.ai.modules.campus.application.service.SubmitGradeUseCase;
 import tools.ceac.ai.modules.campus.application.service.UpdateQuizQuestionUseCase;
@@ -73,6 +74,7 @@ public class CampusMcpTools {
     private final ReplyToMessageUseCase replyToMessageUseCase;
     private final SendNewMessageUseCase sendNewMessageUseCase;
     private final GetMessageRecipientsUseCase getMessageRecipientsUseCase;
+    private final SearchMessageRecipientsUseCase searchMessageRecipientsUseCase;
     private final GetQuizConfigUseCase getQuizConfigUseCase;
     private final GetQuizStructureUseCase getQuizStructureUseCase;
     private final GetQuizQuestionCategoriesUseCase getQuizQuestionCategoriesUseCase;
@@ -108,6 +110,7 @@ public class CampusMcpTools {
             ReplyToMessageUseCase replyToMessageUseCase,
             SendNewMessageUseCase sendNewMessageUseCase,
             GetMessageRecipientsUseCase getMessageRecipientsUseCase,
+            SearchMessageRecipientsUseCase searchMessageRecipientsUseCase,
             GetQuizConfigUseCase getQuizConfigUseCase,
             GetQuizStructureUseCase getQuizStructureUseCase,
             GetQuizQuestionCategoriesUseCase getQuizQuestionCategoriesUseCase,
@@ -141,6 +144,7 @@ public class CampusMcpTools {
         this.replyToMessageUseCase = replyToMessageUseCase;
         this.sendNewMessageUseCase = sendNewMessageUseCase;
         this.getMessageRecipientsUseCase = getMessageRecipientsUseCase;
+        this.searchMessageRecipientsUseCase = searchMessageRecipientsUseCase;
         this.getQuizConfigUseCase = getQuizConfigUseCase;
         this.getQuizStructureUseCase = getQuizStructureUseCase;
         this.getQuizQuestionCategoriesUseCase = getQuizQuestionCategoriesUseCase;
@@ -153,43 +157,43 @@ public class CampusMcpTools {
         this.deleteQuizSlotUseCase = deleteQuizSlotUseCase;
     }
 
-    // â”€â”€ SISTEMA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ SISTEMA Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-    @Tool(description = "Estado del servidor y si hay sesiÃ³n activa en el campus")
+    @Tool(description = "Estado del servidor y si hay sesion activa en el campus")
     public HealthResult getHealth() {
         return new HealthResult("ok", sessionService.isAuthenticated());
     }
 
-    // â”€â”€ PERFIL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ PERFIL Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-    @Tool(description = "Perfil del usuario autenticado: nombre, userId, email, idioma y mensajes no leÃ­dos")
+    @Tool(description = "Perfil del usuario autenticado: nombre, userId, email, idioma y mensajes no leidos")
     public ProfileResult getMyProfile() {
         DashboardSnapshot s = getDashboardUseCase.execute();
         return new ProfileResult(s.userDisplayName(), s.userId(), s.email(), s.language(), s.unreadMessages());
     }
 
-    // â”€â”€ DASHBOARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ DASHBOARD Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     @Tool(description = "Lista de cursos del usuario autenticado con su id, nombre y url")
     public DashboardSnapshot getDashboard() {
         return getDashboardUseCase.execute();
     }
 
-    // â”€â”€ CURSOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ CURSOS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     @Tool(description = "Estructura de un curso: secciones, actividades y recursos. Requiere el courseId.")
     public CourseDetail getCourse(String courseId) {
         return getCourseUseCase.execute(courseId);
     }
 
-    @Tool(description = "Lista de participantes matriculados en un curso con nombre, email, rol y Ãºltimo acceso. Requiere el courseId.")
+    @Tool(description = "Lista de participantes matriculados en un curso con nombre, email, rol y ultimo acceso. Requiere el courseId.")
     public Object getCourseParticipants(String courseId) {
         return getCourseParticipantsUseCase.execute(courseId);
     }
 
-    // â”€â”€ USUARIOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ USUARIOS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-    @Tool(description = "Perfil completo de un usuario (alumno) por su userId: nombre, email, paÃ­s, cursos matriculados y accesos.")
+    @Tool(description = "Perfil completo de un usuario (alumno) por su userId: nombre, email, pais, cursos matriculados y accesos.")
     public Object getUserProfile(String userId) {
         return getUserProfileUseCase.execute(userId);
     }
@@ -233,22 +237,22 @@ public class CampusMcpTools {
         ));
     }
 
-    // â”€â”€ TAREAS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ TAREAS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     @Tool(description = """
-            Detalles de configuración de una tarea Moodle scrapeando modedit.php.
+            Detalles de configuracion de una tarea Moodle scrapeando modedit.php.
             Devuelve: cmid, courseId, name, visible, description, activityInstructions, \
             showDescription, alwaysShowDescription, \
             availableFrom, dueAt, cutoffAt, gradingDueAt (fechas ISO-8601 locales "yyyy-MM-ddTHH:mm" o null si desactivadas), \
             sendNotifications, sendLateNotifications, sendStudentNotifications, \
             maxGrade, gradePass, maxAttempts (0 = ilimitados), attemptReopenMethod.
-            Requiere el cmid del módulo de tarea (no el assignmentId de la API de Moodle).
+            Requiere el cmid del modulo de tarea (no el assignmentId de la API de Moodle).
             """)
     public Object getAssignment(String cmid) {
         return getAssignDetailUseCase.execute(cmid);
     }
 
-    @Tool(description = "Lista de entregas de alumnos para una tarea. Requiere el assignmentId (id del mÃ³dulo Moodle).")
+    @Tool(description = "Lista de entregas de alumnos para una tarea. Requiere el assignmentId (id del modulo Moodle).")
     public Object getSubmissions(String assignmentId) {
         return getAssignSubmissionsUseCase.execute(assignmentId);
     }
@@ -261,59 +265,59 @@ public class CampusMcpTools {
                 .toList();
     }
 
-    @Tool(description = "CalificaciÃ³n y feedback actual de la entrega de un alumno. Requiere assignmentId y userId.")
+    @Tool(description = "Calificacion y feedback actual de la entrega de un alumno. Requiere assignmentId y userId.")
     public Object getGrade(String assignmentId, String userId) {
         return getGradeUseCase.execute(assignmentId, userId);
     }
 
     @Tool(description = """
             Califica la entrega de un alumno. Requiere assignmentId, userId, grade (entero), feedback (HTML o texto) y sendNotification (true/false).
-            ANTES DE EJECUTAR: muestra al usuario un resumen (alumno, nota, feedback) y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            ANTES DE EJECUTAR: muestra al usuario un resumen (alumno, nota, feedback) y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String submitGrade(String assignmentId, String userId, int grade, String feedback, boolean sendNotification) {
         submitGradeUseCase.execute(assignmentId, userId, grade, feedback, sendNotification);
         return "ok";
     }
 
-    // â”€â”€ CUESTIONARIOS â€” RESULTADOS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ CUESTIONARIOS Ã¢â‚¬â€ RESULTADOS Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-    @Tool(description = "Resultados de todos los intentos de un cuestionario. Requiere el quizId (id del mÃ³dulo Moodle).")
+    @Tool(description = "Resultados de todos los intentos de un cuestionario. Requiere el quizId (id del modulo Moodle).")
     public Object getQuizResults(String quizId) {
         return getQuizResultsUseCase.execute(quizId);
     }
 
-    @Tool(description = "RevisiÃ³n detallada de un intento de cuestionario: preguntas, respuestas, puntuaciones. Requiere attemptId.")
+    @Tool(description = "Revision detallada de un intento de cuestionario: preguntas, respuestas, puntuaciones. Requiere attemptId.")
     public Object getQuizAttempt(String attemptId) {
         return getQuizAttemptReviewUseCase.execute(attemptId);
     }
 
-    // â”€â”€ CUESTIONARIOS â€” CORRECCIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ CUESTIONARIOS Ã¢â‚¬â€ CORRECCIÃƒâ€œN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-    @Tool(description = "Datos de correcciÃ³n de una pregunta de un intento (enunciado, respuesta correcta, puntuaciÃ³n actual, comentario). Requiere attemptId y slot.")
+    @Tool(description = "Datos de correccion de una pregunta de un intento (enunciado, respuesta correcta, puntuacion actual, comentario). Requiere attemptId y slot.")
     public Object getQuizComment(String attemptId, String slot) {
         return getQuizCommentUseCase.execute(attemptId, slot);
     }
 
     @Tool(description = """
-            Guarda la puntuaciÃ³n y comentario de una pregunta de un intento. Requiere attemptId, slot, mark (nÃºmero como string) y comentario.
-            ANTES DE EJECUTAR: muestra al usuario un resumen (intento, slot, nota, comentario) y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            Guarda la puntuacion y comentario de una pregunta de un intento. Requiere attemptId, slot, mark (numero como string) y comentario.
+            ANTES DE EJECUTAR: muestra al usuario un resumen (intento, slot, nota, comentario) y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String saveQuizComment(String attemptId, String slot, String mark, String comentario) {
         saveQuizCommentUseCase.execute(attemptId, slot, mark, comentario);
         return "ok";
     }
 
-    // â”€â”€ CUESTIONARIOS â€” OVERRIDES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ CUESTIONARIOS Ã¢â‚¬â€ OVERRIDES Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
-    @Tool(description = "Lista de excepciones de usuario configuradas en un cuestionario. Requiere el cmid del mÃ³dulo.")
+    @Tool(description = "Lista de excepciones de usuario configuradas en un cuestionario. Requiere el cmid del modulo.")
     public Object getQuizOverrides(String cmid) {
         return getQuizUserOverridesUseCase.execute(cmid);
     }
 
     @Tool(description = """
-            Crea o actualiza una excepciÃ³n de usuario en un cuestionario.
+            Crea o actualiza una excepcion de usuario en un cuestionario.
             Requiere: cmid, userId.
             Opcionales: password (String vacio si no se indica), timeopen (ISO: 2026-02-19T00:00), timeclose (ISO), timelimitSeconds, attempts.
             Pasar null en los opcionales que no se quieran modificar.
-            ANTES DE EJECUTAR: muestra al usuario un resumen de los cambios y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            ANTES DE EJECUTAR: muestra al usuario un resumen de los cambios y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String saveQuizOverride(String cmid, String userId, String password,
                                    String timeopen, String timeclose,
                                    Long timelimitSeconds, Integer attempts) {
@@ -322,28 +326,28 @@ public class CampusMcpTools {
     }
 
     @Tool(description = """
-            Elimina una excepciÃ³n de usuario de un cuestionario. Requiere el overrideId.
-            ANTES DE EJECUTAR: muestra al usuario los datos de la excepciÃ³n y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            Elimina una excepcion de usuario de un cuestionario. Requiere el overrideId.
+            ANTES DE EJECUTAR: muestra al usuario los datos de la excepcion y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String deleteQuizOverride(String overrideId) {
         deleteQuizUserOverrideUseCase.execute(overrideId);
         return "ok";
     }
 
-    // â”€â”€ MENSAJERÃA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ MENSAJERÃƒÂA Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     @Tool(description = "Lista de conversaciones del usuario (bandeja de entrada). Requiere userId.")
     public Object getConversations(String userId) {
         return getConversationsUseCase.execute(userId, 1, 51, 0, false, true);
     }
 
-    @Tool(description = "Mensajes de una conversaciÃ³n con sus miembros. Requiere convId y currentUserId.")
+    @Tool(description = "Mensajes de una conversacion con sus miembros. Requiere convId y currentUserId.")
     public ConversationDetail getConversationMessages(String convId, String currentUserId) {
         return getConversationMessagesUseCase.execute(currentUserId, convId, true, 101, 0);
     }
 
     @Tool(description = """
-            Marca una conversaciÃ³n como leÃ­da. Requiere convId y userId.
-            ANTES DE EJECUTAR: pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            Marca una conversacion como leida. Requiere convId y userId.
+            ANTES DE EJECUTAR: pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String markConversationRead(String convId, String userId) {
         markConversationAsReadUseCase.execute(userId, convId);
         return "ok";
@@ -351,7 +355,7 @@ public class CampusMcpTools {
 
     @Tool(description = """
             Responde a un mensaje existente. Requiere studentUserId, myUserId, messageTimestamp, messageId, subject y content (HTML).
-            ANTES DE EJECUTAR: muestra al usuario el destinatario, asunto y contenido del mensaje y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            ANTES DE EJECUTAR: muestra al usuario el destinatario, asunto y contenido del mensaje y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String replyToMessage(String studentUserId, String myUserId, String messageTimestamp,
                                   String messageId, String subject, String content) {
         replyToMessageUseCase.execute(studentUserId, myUserId, messageTimestamp, messageId, subject, content);
@@ -359,8 +363,8 @@ public class CampusMcpTools {
     }
 
     @Tool(description = """
-            EnvÃ­a un nuevo mensaje a uno o varios destinatarios. Requiere lista de recipientIds (solo el nÃºmero, sin 'user-'), subject y content (HTML).
-            ANTES DE EJECUTAR: muestra al usuario la lista de destinatarios, asunto y contenido del mensaje y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            Envia un nuevo mensaje a uno o varios destinatarios. Requiere lista de recipientIds (solo el numero, sin 'user-'), subject y content (HTML).
+            ANTES DE EJECUTAR: muestra al usuario la lista de destinatarios, asunto y contenido del mensaje y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String sendNewMessage(List<String> recipientIds, String subject, String content) {
         sendNewMessageUseCase.execute(recipientIds, subject, content);
         return "ok";
@@ -371,39 +375,53 @@ public class CampusMcpTools {
         return getMessageRecipientsUseCase.execute();
     }
 
-    // â”€â”€ CUESTIONARIOS â€” ESTRUCTURA Y EDICIÃ“N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    @Tool(description = "Lista de todos los alumnos de todos los cursos con su id y nombre completo. Equivale al listado completo de posibles destinatarios de mensajes.")
+    public Object getAllUsers() {
+        return getMessageRecipientsUseCase.execute();
+    }
 
-    @Tool(description = "ConfiguraciÃ³n de un cuestionario (fechas, lÃ­mite de tiempo, intentos, calificaciÃ³n, contraseÃ±a, etc.). Requiere el cmid del mÃ³dulo.")
+    @Tool(description = """
+            Busca usuarios por texto usando la busqueda del campus.
+            Requiere query no vacia.
+            Devuelve coincidencias de usuarios por id y nombre completo.
+            """)
+    public Object searchUsers(String query) {
+        return searchMessageRecipientsUseCase.execute(query);
+    }
+
+    // Ã¢â€â‚¬Ã¢â€â‚¬ CUESTIONARIOS Ã¢â‚¬â€ ESTRUCTURA Y EDICIÃƒâ€œN Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+
+    @Tool(description = "Configuracion de un cuestionario (fechas, limite de tiempo, intentos, calificacion, contrasena, etc.). Requiere el cmid del modulo.")
     public Object getQuizConfig(String cmid) {
         return getQuizConfigUseCase.execute(cmid);
     }
 
-    @Tool(description = "Estructura de un cuestionario: slots (preguntas) con su nÃºmero, pÃ¡gina, tipo, nombre y puntuaciÃ³n mÃ¡xima. Requiere el cmid del mÃ³dulo.")
+    @Tool(description = "Estructura de un cuestionario: slots (preguntas) con su numero, pagina, tipo, nombre y puntuacion maxima. Requiere el cmid del modulo.")
     public Object getQuizSlots(String cmid) {
         return getQuizStructureUseCase.execute(cmid);
     }
 
     @Tool(description = """
-            Lista de categorÃ­as disponibles del banco de preguntas para un cuestionario.
-            Requiere el cmid del mÃ³dulo.
-            El campo 'categoryValue' de cada categorÃ­a es el que hay que pasar al crear una pregunta.""")
+            Lista de categorias disponibles del banco de preguntas para un cuestionario.
+            Requiere el cmid del modulo.
+            El campo 'categoryValue' de cada categoria es el que hay que pasar al crear una pregunta.""")
     public Object getQuizQuestionCategories(String cmid) {
         return getQuizQuestionCategoriesUseCase.execute(cmid);
     }
 
-    @Tool(description = "Datos completos de una pregunta (enunciado, respuestas, feedback, configuraciÃ³n). Requiere questionId y el cmid del cuestionario.")
+    @Tool(description = "Datos completos de una pregunta (enunciado, respuestas, feedback, configuracion). Requiere questionId y el cmid del cuestionario.")
     public Object getQuestion(String questionId, String cmid) {
         return getQuizQuestionUseCase.execute(questionId, cmid);
     }
 
     @Tool(description = """
-            Crea una nueva pregunta de tipo opciÃ³n mÃºltiple en el banco de preguntas de un cuestionario.
+            Crea una nueva pregunta de tipo opcion multiple en el banco de preguntas de un cuestionario.
             Requiere: cmid y los datos de la pregunta.
             Campos obligatorios en question: name, questionText, defaultMark, single ('1'=una respuesta, '0'=varias), answers (lista con text, fraction y feedback).
-            Fracciones: decimales sobre 1 con punto como separador. Ejemplos: 1.0 = correcta, 0.0 = incorrecta sin penalizaciÃ³n, -0.5 = penalizaciÃ³n 50%. NUNCA usar porcentajes enteros ni coma como separador decimal.
+            Fracciones: decimales sobre 1 con punto como separador. Ejemplos: 1.0 = correcta, 0.0 = incorrecta sin penalizacion, -0.5 = penalizacion 50%. NUNCA usar porcentajes enteros ni coma como separador decimal.
             ANTES DE EJECUTAR:
-            1. Llama a getQuizQuestionCategories(cmid) y presenta al usuario la lista de categorÃ­as disponibles (campo name) para que seleccione una mediante un selector. Usa el campo categoryValue de la categorÃ­a seleccionada.
-            2. Muestra al usuario un resumen de la pregunta y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            1. Llama a getQuizQuestionCategories(cmid) y presenta al usuario la lista de categorias disponibles (campo name) para que seleccione una mediante un selector. Usa el campo categoryValue de la categoria seleccionada.
+            2. Muestra al usuario un resumen de la pregunta y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String createQuizMultichoiceQuestion(String cmid, String categoryValue,
                                                  UpdateQuizMultichoiceQuestionRequest question) {
         createQuizMultichoiceQuestionUseCase.execute(cmid, categoryValue, question);
@@ -411,14 +429,14 @@ public class CampusMcpTools {
     }
 
     @Tool(description = """
-            âš ï¸ Esta herramienta SOLO crea la pregunta en el banco, NO la aÃ±ade al cuestionario ni la hace visible a los alumnos; para crear una pregunta y aÃ±adirla directamente al test usa createQuizMultichoiceQuestion.
-            Crea una nueva pregunta de tipo opciÃ³n mÃºltiple directamente en el banco de preguntas (sin aÃ±adirla a ningÃºn slot del cuestionario).
+            Esta herramienta SOLO crea la pregunta en el banco, NO la anade al cuestionario ni la hace visible a los alumnos; para crear una pregunta y anadirla directamente al test usa createQuizMultichoiceQuestion.
+            Crea una nueva pregunta de tipo opcion multiple directamente en el banco de preguntas (sin anadirla a ningun slot del cuestionario).
             Requiere: cmid y los datos de la pregunta.
             Campos obligatorios en question: name, questionText, defaultMark, single ('1'=una respuesta, '0'=varias), answers (lista con text, fraction y feedback).
-            Fracciones: decimales sobre 1 con punto como separador. Ejemplos: 1.0 = correcta, 0.0 = incorrecta sin penalizaciÃ³n, -0.5 = penalizaciÃ³n 50%. NUNCA usar porcentajes enteros ni coma como separador decimal.
+            Fracciones: decimales sobre 1 con punto como separador. Ejemplos: 1.0 = correcta, 0.0 = incorrecta sin penalizacion, -0.5 = penalizacion 50%. NUNCA usar porcentajes enteros ni coma como separador decimal.
             ANTES DE EJECUTAR:
-            1. Llama a getQuizQuestionCategories(cmid) y presenta al usuario la lista de categorÃ­as disponibles (campo name) para que seleccione una mediante un selector. Usa el campo categoryValue de la categorÃ­a seleccionada.
-            2. Muestra al usuario un resumen de la pregunta y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            1. Llama a getQuizQuestionCategories(cmid) y presenta al usuario la lista de categorias disponibles (campo name) para que seleccione una mediante un selector. Usa el campo categoryValue de la categoria seleccionada.
+            2. Muestra al usuario un resumen de la pregunta y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String createQuestionInBank(String cmid, String categoryValue,
                                         UpdateQuizMultichoiceQuestionRequest question) {
         createQuestionInBankUseCase.execute(cmid, categoryValue, question);
@@ -426,11 +444,11 @@ public class CampusMcpTools {
     }
 
     @Tool(description = """
-            Actualiza una pregunta de tipo opciÃ³n mÃºltiple existente.
+            Actualiza una pregunta de tipo opcion multiple existente.
             Requiere: questionId, cmid y los datos actualizados de la pregunta.
-            Solo se modifican los campos que se envÃ­en; los demÃ¡s conservan su valor actual en Moodle.
-            Fracciones: decimales sobre 1 con punto como separador. Ejemplos: 1.0 = correcta, 0.0 = incorrecta sin penalizaciÃ³n, -0.5 = penalizaciÃ³n 50%. NUNCA usar porcentajes enteros ni coma como separador decimal.
-            ANTES DE EJECUTAR: muestra al usuario un resumen de los cambios que se van a aplicar y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            Solo se modifican los campos que se envien; los demas conservan su valor actual en Moodle.
+            Fracciones: decimales sobre 1 con punto como separador. Ejemplos: 1.0 = correcta, 0.0 = incorrecta sin penalizacion, -0.5 = penalizacion 50%. NUNCA usar porcentajes enteros ni coma como separador decimal.
+            ANTES DE EJECUTAR: muestra al usuario un resumen de los cambios que se van a aplicar y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public String updateQuizMultichoiceQuestion(String questionId, String cmid,
                                                  UpdateQuizMultichoiceQuestionRequest question) {
         updateQuizQuestionUseCase.execute(questionId, cmid, question);
@@ -438,13 +456,13 @@ public class CampusMcpTools {
     }
 
     @Tool(description = """
-            Elimina un slot (pregunta) de un cuestionario. Requiere el cmid del mÃ³dulo y el slotId. Devuelve la nueva suma de puntos y el nuevo nÃºmero de preguntas.
-            ANTES DE EJECUTAR: muestra al usuario los datos del slot (id, nÃºmero, nombre de la pregunta si estÃ¡ disponible) y pide confirmaciÃ³n mediante un selector SÃ­/No. Solo procede si elige SÃ­.""")
+            Elimina un slot (pregunta) de un cuestionario. Requiere el cmid del modulo y el slotId. Devuelve la nueva suma de puntos y el nuevo numero de preguntas.
+            ANTES DE EJECUTAR: muestra al usuario los datos del slot (id, numero, nombre de la pregunta si esta disponible) y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
     public DeleteQuizSlotResponse deleteQuizSlot(String cmid, String slotId) {
         return deleteQuizSlotUseCase.execute(cmid, slotId);
     }
 
-    // â”€â”€ Tipos internos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Tipos internos Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
     record HealthResult(String status, boolean authenticated) {}
 

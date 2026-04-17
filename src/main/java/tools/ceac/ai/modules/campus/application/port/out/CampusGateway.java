@@ -77,6 +77,9 @@ public interface CampusGateway {
 
     HttpResponse<String> postComposeAllCourses(String sesskey) throws IOException, InterruptedException;
 
+    HttpResponse<String> searchMessageUsers(String userId, String sesskey, String search, int limitNum, int limitFrom)
+            throws IOException, InterruptedException;
+
     HttpResponse<String> postSendMessage(String sesskey, String course,
                                          java.util.List<String> recipientIds,
                                          String itemid, String attachments,

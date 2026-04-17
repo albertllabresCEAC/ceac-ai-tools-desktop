@@ -15,6 +15,7 @@ public record TrelloCardSummary(
         String due,
         Boolean dueComplete,
         Double pos,
-        List<String> idMembers
+        List<String> idMembers,
+        List<TrelloCustomFieldItem> customFieldItems
 ) {
 }

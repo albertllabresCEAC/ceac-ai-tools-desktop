@@ -5,6 +5,7 @@ import tools.ceac.ai.modules.campus.application.service.GetConversationsUseCase;
 import tools.ceac.ai.modules.campus.application.service.GetMessageRecipientsUseCase;
 import tools.ceac.ai.modules.campus.application.service.MarkConversationAsReadUseCase;
 import tools.ceac.ai.modules.campus.application.service.ReplyToMessageUseCase;
+import tools.ceac.ai.modules.campus.application.service.SearchMessageRecipientsUseCase;
 import tools.ceac.ai.modules.campus.application.service.SendNewMessageUseCase;
 import tools.ceac.ai.modules.campus.domain.model.Conversation;
 import tools.ceac.ai.modules.campus.domain.model.ConversationDetail;
@@ -37,19 +38,22 @@ public class MessagesController {
     private final ReplyToMessageUseCase replyToMessageUseCase;
     private final SendNewMessageUseCase sendNewMessageUseCase;
     private final GetMessageRecipientsUseCase getMessageRecipientsUseCase;
+    private final SearchMessageRecipientsUseCase searchMessageRecipientsUseCase;
 
     public MessagesController(GetConversationsUseCase getConversationsUseCase,
                                GetConversationMessagesUseCase getConversationMessagesUseCase,
                                MarkConversationAsReadUseCase markConversationAsReadUseCase,
                                ReplyToMessageUseCase replyToMessageUseCase,
                                SendNewMessageUseCase sendNewMessageUseCase,
-                               GetMessageRecipientsUseCase getMessageRecipientsUseCase) {
+                               GetMessageRecipientsUseCase getMessageRecipientsUseCase,
+                               SearchMessageRecipientsUseCase searchMessageRecipientsUseCase) {
         this.getConversationsUseCase = getConversationsUseCase;
         this.getConversationMessagesUseCase = getConversationMessagesUseCase;
         this.markConversationAsReadUseCase = markConversationAsReadUseCase;
         this.replyToMessageUseCase = replyToMessageUseCase;
         this.sendNewMessageUseCase = sendNewMessageUseCase;
         this.getMessageRecipientsUseCase = getMessageRecipientsUseCase;
+        this.searchMessageRecipientsUseCase = searchMessageRecipientsUseCase;
     }
 
     @GetMapping("/messages/conversations")
@@ -134,6 +138,28 @@ public class MessagesController {
     @GetMapping("/messages/recipients")
     public List<MessageRecipientResponse> recipients() {
         return getMessageRecipientsUseCase.execute()
+                .stream()
+                .map(r -> new MessageRecipientResponse(r.id(), r.fullName()))
+                .toList();
+    }
+
+    @GetMapping("/messages/users")
+    public List<MessageRecipientResponse> users() {
+        return getMessageRecipientsUseCase.execute()
+                .stream()
+                .map(r -> new MessageRecipientResponse(r.id(), r.fullName()))
+                .toList();
+    }
+
+    @GetMapping("/messages/users/search")
+    public List<MessageRecipientResponse> searchUsers(
+            @Parameter(description = "Texto de busqueda para nombre o id de usuario", example = "Juan")
+            @RequestParam String query,
+            @Parameter(description = "Maximo de resultados devueltos por Moodle", example = "51")
+            @RequestParam(defaultValue = "51") int limitNum,
+            @Parameter(description = "Offset para paginacion de resultados", example = "0")
+            @RequestParam(defaultValue = "0") int limitFrom) {
+        return searchMessageRecipientsUseCase.execute(query, limitNum, limitFrom)
                 .stream()
                 .map(r -> new MessageRecipientResponse(r.id(), r.fullName()))
                 .toList();

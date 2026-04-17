@@ -56,7 +56,8 @@ public class TrelloListController {
         return trelloService.archiveList(listId);
     }
 
-    @Operation(summary = "List list cards", description = "Returns the cards of a given list.")
+    @Operation(summary = "List list cards",
+            description = "Returns the cards of a given list, always including the current custom field values for each card when present.")
     @GetMapping("/lists/{listId}/cards")
     public List<TrelloCardSummary> cards(@PathVariable String listId) {
         return trelloService.listCards(listId);

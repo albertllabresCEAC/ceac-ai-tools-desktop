@@ -121,12 +121,19 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.archiveList(listId));
     }
 
-    @Tool(description = "Lists the cards of a Trello list from its listId.")
+    @Tool(description = """
+            Lists the cards of a Trello list from its listId.
+            The returned cards already include their current custom field values when present.
+            Custom field definitions live at board level; to resolve field names, types and list options use listarCamposPersonalizadosTrello(boardId).
+            """)
     public String listarTarjetasTrello(String listId) throws Exception {
         return objectMapper.writeValueAsString(trelloService.listCards(listId));
     }
 
-    @Tool(description = "Returns the current detail of a Trello card from its cardId.")
+    @Tool(description = """
+            Returns the current detail of a Trello card from its cardId, including current custom field values when present.
+            Custom field definitions live at board level; to resolve field names, types and list options use listarCamposPersonalizadosTrello(boardId).
+            """)
     public String verTarjetaTrello(String cardId) throws Exception {
         return objectMapper.writeValueAsString(trelloService.getCard(cardId));
     }
