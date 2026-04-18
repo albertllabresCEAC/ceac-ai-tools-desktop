@@ -158,14 +158,16 @@ public class OutlookComGateway implements OutlookGateway {
         MessageSearchRequest effectiveRequest = request != null ? request : new MessageSearchRequest();
         int limit = sanitizeSearchLimit(effectiveRequest.getLimit());
         boolean unreadOnly = Boolean.TRUE.equals(effectiveRequest.getUnreadOnly());
-        OffsetDateTime since = parseSince(effectiveRequest.getSince());
+        OffsetDateTime since = parseBoundary(effectiveRequest.getSince(), "since");
+        OffsetDateTime until = parseBoundary(effectiveRequest.getUntil(), "until");
+        validateSearchRange(since, until);
         String normalizedQuery = normalizeQuery(effectiveRequest.getQuery());
 
         return withNamespace(namespace -> {
             Map<String, MessageSearchResult> matches = new LinkedHashMap<>();
             for (FolderType folderType : resolveSearchFolders(effectiveRequest.getFolder())) {
                 Dispatch folder = getDefaultFolder(namespace, folderType);
-                for (MessageSearchResult match : searchFolder(namespace, folder, folderType, normalizedQuery, unreadOnly, since)) {
+                for (MessageSearchResult match : searchFolder(namespace, folder, folderType, normalizedQuery, unreadOnly, since, until)) {
                     matches.putIfAbsent(match.entryId(), match);
                 }
             }
@@ -872,10 +874,11 @@ public class OutlookComGateway implements OutlookGateway {
             FolderType folderType,
             String normalizedQuery,
             boolean unreadOnly,
-            OffsetDateTime since
+            OffsetDateTime since,
+            OffsetDateTime until
     ) {
         Dispatch items = Dispatch.get(folder, "Items").toDispatch();
-        String filter = buildRestrictFilter(since, unreadOnly);
+        String filter = buildRestrictFilter(since, until, unreadOnly);
         Dispatch collection;
         try {
             collection = filter != null ? Dispatch.call(items, "Restrict", filter).toDispatch() : items;
@@ -894,7 +897,7 @@ public class OutlookComGateway implements OutlookGateway {
             }
             OffsetDateTime receivedAt = safeDate(item, "ReceivedTime");
             boolean unread = safeBoolean(item, "UnRead");
-            if (!matchesListFilter(receivedAt, unread, since, unreadOnly)) {
+            if (!matchesSearchFilter(receivedAt, unread, since, until, unreadOnly)) {
                 if (canStopScanning(receivedAt, since, true)) {
                     break;
                 }
@@ -930,23 +933,29 @@ public class OutlookComGateway implements OutlookGateway {
         return StringUtils.hasText(query) ? query.trim().toLowerCase(Locale.ROOT) : null;
     }
 
-    private OffsetDateTime parseSince(String since) {
-        if (!StringUtils.hasText(since)) {
+    private OffsetDateTime parseBoundary(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
             return null;
         }
-        String value = since.trim();
+        String normalized = value.trim();
         try {
-            return OffsetDateTime.parse(value);
+            return OffsetDateTime.parse(normalized);
         } catch (DateTimeParseException ignored) {
         }
         try {
-            return OffsetDateTime.ofInstant(Instant.parse(value), ZoneId.systemDefault());
+            return OffsetDateTime.ofInstant(Instant.parse(normalized), ZoneId.systemDefault());
         } catch (DateTimeParseException ignored) {
         }
         try {
-            return LocalDateTime.parse(value).atZone(ZoneId.systemDefault()).toOffsetDateTime();
+            return LocalDateTime.parse(normalized).atZone(ZoneId.systemDefault()).toOffsetDateTime();
         } catch (DateTimeParseException exception) {
-            throw new OutlookComException("since debe ser una fecha ISO-8601 valida", exception);
+            throw new OutlookComException(fieldName + " debe ser una fecha ISO-8601 valida", exception);
+        }
+    }
+
+    private void validateSearchRange(OffsetDateTime since, OffsetDateTime until) {
+        if (since != null && until != null && until.isBefore(since)) {
+            throw new OutlookComException("until debe ser mayor o igual que since");
         }
     }
 
@@ -966,6 +975,22 @@ public class OutlookComGateway implements OutlookGateway {
         return since == null || receivedAt != null;
     }
 
+    private boolean matchesSearchFilter(
+            OffsetDateTime receivedAt,
+            boolean unread,
+            OffsetDateTime since,
+            OffsetDateTime until,
+            boolean unreadOnly
+    ) {
+        if (!matchesListFilter(receivedAt, unread, since, unreadOnly)) {
+            return false;
+        }
+        if (until != null && receivedAt != null && receivedAt.isAfter(until)) {
+            return false;
+        }
+        return until == null || receivedAt != null;
+    }
+
     private boolean canStopScanning(OffsetDateTime receivedAt, OffsetDateTime since, boolean descending) {
         return descending && since != null && receivedAt != null && receivedAt.isBefore(since);
     }
@@ -979,6 +1004,7 @@ public class OutlookComGateway implements OutlookGateway {
         if (containsIgnoreCase(safeStringOrNull(item, "SenderEmailAddress"), normalizedQuery)) return true;
         if (containsIgnoreCase(safeStringOrNull(item, "To"), normalizedQuery)) return true;
         if (containsIgnoreCase(safeStringOrNull(item, "CC"), normalizedQuery)) return true;
+        if (containsIgnoreCase(safeStringOrNull(item, "BCC"), normalizedQuery)) return true;
         return containsIgnoreCase(readBodyText(item), normalizedQuery);
     }
 
@@ -987,10 +1013,18 @@ public class OutlookComGateway implements OutlookGateway {
     }
 
     private String buildRestrictFilter(OffsetDateTime since, boolean unreadOnly) {
+        return buildRestrictFilter(since, null, unreadOnly);
+    }
+
+    private String buildRestrictFilter(OffsetDateTime since, OffsetDateTime until, boolean unreadOnly) {
         List<String> parts = new ArrayList<>();
         if (since != null) {
             String utcDate = since.withOffsetSameInstant(ZoneOffset.UTC).format(RESTRICT_DATE_FORMAT);
             parts.add("\"urn:schemas:httpmail:date\" >= '" + utcDate + "'");
+        }
+        if (until != null) {
+            String utcDate = until.withOffsetSameInstant(ZoneOffset.UTC).format(RESTRICT_DATE_FORMAT);
+            parts.add("\"urn:schemas:httpmail:date\" <= '" + utcDate + "'");
         }
         if (unreadOnly) {
             parts.add("\"urn:schemas:httpmail:read\" = 0");
@@ -1042,6 +1076,9 @@ public class OutlookComGateway implements OutlookGateway {
                 safeString(item, "Subject"),
                 safeString(item, "SenderName"),
                 readSenderEmail(item),
+                safeStringOrNull(item, "To"),
+                safeStringOrNull(item, "CC"),
+                safeStringOrNull(item, "BCC"),
                 readBodyText(item),
                 safeBoolean(item, "UnRead"),
                 safeDate(item, "ReceivedTime"),

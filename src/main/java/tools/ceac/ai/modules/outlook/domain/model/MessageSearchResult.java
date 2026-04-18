@@ -8,9 +8,9 @@ import java.util.List;
  *
  * <p>Each instance represents a single message that matched the search criteria.
  * Unlike {@link MailMessage} (used by the listing endpoint), this record includes the
- * {@code folder} the message was found in — necessary because search can span multiple
- * folders simultaneously — but omits {@code to}, {@code cc}, {@code bcc} and {@code htmlBody},
- * which are not populated during search.</p>
+ * {@code folder} the message was found in, necessary because search can span multiple
+ * folders simultaneously, but omits {@code htmlBody}, which is not populated during
+ * search.</p>
  *
  * <ul>
  *   <li>{@code body} contains the full plain-text body of the message.</li>
@@ -25,6 +25,9 @@ public record MessageSearchResult(
         String subject,
         String senderName,
         String senderEmail,
+        String to,
+        String cc,
+        String bcc,
         String body,
         boolean unread,
         OffsetDateTime receivedAt,

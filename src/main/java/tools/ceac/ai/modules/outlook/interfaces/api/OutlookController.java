@@ -48,7 +48,7 @@ public class OutlookController {
 
     @PostMapping("/messages/search")
     @Operation(summary = "Busca mensajes de Outlook por texto y filtros",
-            description = "Acepta el cuerpo plano con query, folder, since, limit y unreadOnly, o el formato envuelto {\"request\": {...}} para clientes MCP que ya usen ese contrato.")
+            description = "Acepta el cuerpo plano con query, folder, since, until, limit y unreadOnly, o el formato envuelto {\"request\": {...}} para clientes MCP que ya usen ese contrato.")
     public List<MessageSearchResult> searchMessages(@Valid @RequestBody MessageSearchRequest request) {
         return outlookService.searchMessages(request);
     }

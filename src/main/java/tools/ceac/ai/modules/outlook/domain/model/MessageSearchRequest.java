@@ -36,6 +36,10 @@ public class MessageSearchRequest {
     @Schema(description = "Only include messages received on or after this ISO-8601 date-time.")
     private String since;
 
+    @ToolParam(required = false, description = "Only include messages received on or before this ISO-8601 date-time.")
+    @Schema(description = "Only include messages received on or before this ISO-8601 date-time.")
+    private String until;
+
     @Schema(description = "Optional wrapper for MCP/API clients that send the payload as {\"request\": {...}}.")
     @JsonDeserialize(using = MessageSearchRequest.NestedRequestDeserializer.class)
     private MessageSearchRequest request;
@@ -78,6 +82,14 @@ public class MessageSearchRequest {
 
     public void setSince(String since) {
         this.since = since;
+    }
+
+    public String getUntil() {
+        return until != null ? until : nestedValue(MessageSearchRequest::getUntil);
+    }
+
+    public void setUntil(String until) {
+        this.until = until;
     }
 
     public MessageSearchRequest getRequest() {

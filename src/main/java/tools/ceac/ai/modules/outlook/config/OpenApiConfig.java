@@ -59,6 +59,10 @@ public class OpenApiConfig {
             if (searchSinceProperty instanceof Schema<?> searchSince) {
                 searchSince.setExample(OffsetDateTime.now().minusDays(7).truncatedTo(ChronoUnit.SECONDS).toString());
             }
+            Object searchUntilProperty = messageSearchRequest.getProperties().get("until");
+            if (searchUntilProperty instanceof Schema<?> searchUntil) {
+                searchUntil.setExample(OffsetDateTime.now().truncatedTo(ChronoUnit.SECONDS).toString());
+            }
             Object requestProperty = messageSearchRequest.getProperties().get("request");
             if (requestProperty instanceof Schema<?> request) {
                 request.setDescription("Optional wrapper for clients sending {\"request\": {...}}.");

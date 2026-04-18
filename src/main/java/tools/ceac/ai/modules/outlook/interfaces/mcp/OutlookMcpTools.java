@@ -112,7 +112,7 @@ public class OutlookMcpTools {
 
     @Tool(description = """
             Search Outlook Desktop messages by free text across one or more folders.
-            Matching is performed against subject, sender name, sender email, recipients (To, CC) and body.
+            Matching is performed against subject, sender name, sender email, recipients (To, CC, BCC) and body.
 
             REQUEST (all fields optional):
               query      : Free-text string to search for. If omitted, returns all messages matching the other filters.
@@ -123,6 +123,9 @@ public class OutlookMcpTools {
               since      : Lower bound for ReceivedTime. ISO-8601 formats accepted: \
             "2026-04-10T00:00:00+02:00", "2026-04-10T00:00:00Z", "2026-04-10T00:00:00". \
             If omitted, no lower bound is applied.
+              until      : Upper bound for ReceivedTime, inclusive. ISO-8601 formats accepted: \
+            "2026-04-18T23:59:59+02:00", "2026-04-18T21:59:59Z", "2026-04-18T23:59:59". \
+            If omitted, no upper bound is applied.
 
             RESPONSE (array of search result objects):
               entryId     : Outlook identifier. Use it as input for fetch, getMessage, listAttachments or getAttachment.
@@ -130,6 +133,9 @@ public class OutlookMcpTools {
               subject     : Message subject.
               senderName  : Display name of the sender.
               senderEmail : SMTP address of the sender.
+              to          : Primary recipients string as exposed by Outlook.
+              cc          : CC recipients string as exposed by Outlook.
+              bcc         : BCC recipients string as exposed by Outlook. Often empty on received messages.
               body        : Full plain-text body of the message.
               unread      : true if the message has not been read.
               receivedAt  : Received timestamp (ISO-8601 with offset).
