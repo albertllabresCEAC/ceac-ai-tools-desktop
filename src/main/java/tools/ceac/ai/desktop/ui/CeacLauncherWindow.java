@@ -645,7 +645,7 @@ public class CeacLauncherWindow {
         List<ClientMcpResourceResponse> resources = launcherSessionResources.resources();
         controlPlaneSession = new ControlPlaneSession(resolveControlPlaneUrl(), response.accessToken(), response.externalUserId(),
                 machineIdField.getText().trim(), clientVersionField.getText().trim(), response.username(), response.email(),
-                response.bootstrap(), resources, launcherSessionResources.tokenContext().issuerUri(),
+                response.accessLevel(), response.bootstrap(), resources, launcherSessionResources.tokenContext().issuerUri(),
                 launcherSessionResources.tokenContext().sharedSecret());
         SwingUtilities.invokeLater(() -> {
             set(loginStatus, "Sesion preparada", OK);
@@ -654,7 +654,7 @@ public class CeacLauncherWindow {
             loginButton.setEnabled(false);
             logoutButton.setEnabled(true);
             setLoginFieldsEditable(false);
-            updateSessionBadge("Sesion preparada", OK);
+            updateSessionBadge("Sesion preparada · " + response.accessLevel().displayName(), OK);
             updateAccessRequirement(outlookWidgets);
             updateAccessRequirement(qbidWidgets);
             updateAccessRequirement(campusWidgets);
@@ -1455,8 +1455,16 @@ public class CeacLauncherWindow {
             return;
         }
         boolean authenticated = controlPlaneSession != null;
-        widgets.accessRequirement.setVisible(!authenticated);
-        widgets.accessRequirement.setText(authenticated ? "" : "<html><div style='width:300px;'>Se requiere que el usuario este autenticado para usar este modulo.</div></html>");
+        String text;
+        if (!authenticated) {
+            text = "<html><div style='width:300px;'>Se requiere que el usuario este autenticado para usar este modulo.</div></html>";
+        } else if (controlPlaneSession.allowsWrites()) {
+            text = "<html><div style='width:300px;'>Perfil actual: lectura y escritura. Este runtime expone tools de consulta y modificacion.</div></html>";
+        } else {
+            text = "<html><div style='width:300px;'>Perfil actual: solo lectura. Este runtime expone unicamente tools de consulta.</div></html>";
+        }
+        widgets.accessRequirement.setVisible(true);
+        widgets.accessRequirement.setText(text);
         widgets.accessRequirement.revalidate();
         widgets.accessRequirement.repaint();
     }

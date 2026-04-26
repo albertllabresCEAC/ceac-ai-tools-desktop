@@ -3,6 +3,7 @@ package tools.ceac.ai.modules.trello.interfaces.mcp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
+import tools.ceac.ai.security.CeacWriteTool;
 import tools.ceac.ai.modules.trello.application.service.TrelloService;
 import tools.ceac.ai.modules.trello.domain.model.CreateCustomFieldOptionRequest;
 import tools.ceac.ai.modules.trello.domain.model.CreateCustomFieldRequest;
@@ -46,6 +47,7 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.getBoard(boardId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Creates a new Trello board.
             name is required.
@@ -57,6 +59,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Partially updates a Trello board.
             Null means "leave unchanged".
@@ -69,6 +72,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Archives (closes) a Trello board from its boardId.
             Trello does not support permanent deletion of boards via API.
@@ -87,6 +91,7 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.getList(listId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Creates a new list inside a Trello board.
             boardId and name are required.
@@ -98,6 +103,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Partially updates a Trello list.
             Null means "leave unchanged".
@@ -113,6 +119,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Archives a Trello list from its listId.
             Trello does not support permanent deletion of lists via API.
@@ -181,11 +188,13 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = "Deletes a Trello card from its cardId. This is a destructive operation.")
     public String eliminarTarjetaTrello(String cardId) throws Exception {
         return objectMapper.writeValueAsString(trelloService.deleteCard(cardId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Moves a Trello card to another list.
             listId is required and must be the destination list identifier.
@@ -203,6 +212,7 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.listChecklists(cardId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Creates a checklist on a Trello card.
             name is required by this wrapper.
@@ -216,6 +226,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Partially updates a Trello checklist.
             Null means "leave unchanged".
@@ -228,11 +239,13 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = "Deletes a Trello checklist from its checklistId. This is a destructive operation.")
     public String eliminarChecklistTrello(String checklistId) throws Exception {
         return objectMapper.writeValueAsString(trelloService.deleteChecklist(checklistId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Creates a check item inside a Trello checklist.
             name is required by this wrapper.
@@ -246,6 +259,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Partially updates a checklist item in a Trello card.
             Null means "leave unchanged".
@@ -271,6 +285,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = "Deletes a checklist item from a Trello card. This is a destructive operation.")
     public String eliminarItemChecklistTrello(String cardId, String checkItemId) throws Exception {
         return objectMapper.writeValueAsString(trelloService.deleteCheckItem(cardId, checkItemId));
@@ -283,6 +298,7 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.listCustomFields(boardId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Creates a new custom field on a Trello board.
             boardId, name and type are required.
@@ -296,6 +312,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Partially updates a Trello custom field definition.
             Null means "leave unchanged".
@@ -309,11 +326,13 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = "Permanently deletes a custom field definition and all its values from every card in the board. This is a destructive operation.")
     public String eliminarCampoPersonalizadoTrello(String customFieldId) throws Exception {
         return objectMapper.writeValueAsString(trelloService.deleteCustomField(customFieldId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Adds an option to a list-type Trello custom field.
             text is required (the display label).
@@ -327,6 +346,7 @@ public class TrelloMcpTools {
         );
     }
 
+    @CeacWriteTool
     @Tool(description = "Removes an option from a list-type Trello custom field. This is a destructive operation.")
     public String eliminarOpcionCampoPersonalizadoTrello(String customFieldId, String optionId) throws Exception {
         return objectMapper.writeValueAsString(trelloService.deleteCustomFieldOption(customFieldId, optionId));
@@ -337,6 +357,7 @@ public class TrelloMcpTools {
         return objectMapper.writeValueAsString(trelloService.listCardCustomFieldItems(cardId));
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Sets or clears a custom field value on a Trello card.
             Provide exactly one value matching the field type:

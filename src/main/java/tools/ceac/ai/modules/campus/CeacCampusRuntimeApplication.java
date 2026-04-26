@@ -2,6 +2,8 @@ package tools.ceac.ai.modules.campus;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import tools.ceac.ai.security.RuntimeAccessProperties;
 
 /**
  * Embedded Spring runtime for Campus MCP inside CEAC AI Tools Desktop.
@@ -12,6 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableConfigurationProperties(RuntimeAccessProperties.class)
 public class CeacCampusRuntimeApplication {
 }
 

@@ -27,6 +27,7 @@ import tools.ceac.ai.modules.outlook.application.service.OutlookMailService;
 import tools.ceac.ai.modules.outlook.domain.exception.OutlookComException;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
+import tools.ceac.ai.security.CeacWriteTool;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
@@ -162,6 +163,7 @@ public class OutlookMcpTools {
         return getMessage(request);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Create an Outlook Desktop draft email and save it to the Drafts folder.
 
@@ -195,6 +197,7 @@ public class OutlookMcpTools {
         return outlookService.createDraft(draftRequest);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Attach a file to an existing Outlook Desktop draft.
 
@@ -214,6 +217,7 @@ public class OutlookMcpTools {
         return outlookService.addAttachmentToDraft(request.getEntryId(), request.getAttachment());
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Update fields of an existing Outlook Desktop draft. Only the fields provided are changed; omitted fields are left untouched.
             Attachments in the request are appended — existing attachments on the draft are preserved.
@@ -278,6 +282,7 @@ public class OutlookMcpTools {
         return outlookService.downloadAttachment(request.getEntryId(), request.getAttachmentIndex());
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Compose and send an Outlook Desktop email immediately, without creating a draft first.
 
@@ -310,6 +315,7 @@ public class OutlookMcpTools {
         return outlookService.sendMail(sendRequest);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Send an existing Outlook Desktop draft. The draft is removed from Drafts after sending.
 
@@ -324,6 +330,7 @@ public class OutlookMcpTools {
         return outlookService.sendExistingDraft(request.getEntryId());
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Discard an existing Outlook Desktop draft.
 

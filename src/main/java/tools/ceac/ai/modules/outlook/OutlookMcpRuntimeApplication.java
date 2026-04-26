@@ -4,6 +4,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 import tools.ceac.ai.modules.outlook.config.JacobProperties;
 import tools.ceac.ai.modules.outlook.config.OutlookProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import tools.ceac.ai.security.RuntimeAccessProperties;
 
 /**
  * Runtime Spring Boot del modulo Outlook MCP.
@@ -14,6 +16,7 @@ import tools.ceac.ai.modules.outlook.config.OutlookProperties;
  */
 @SpringBootApplication
 @ConfigurationPropertiesScan(basePackageClasses = {OutlookProperties.class, JacobProperties.class})
+@EnableConfigurationProperties(RuntimeAccessProperties.class)
 public class OutlookMcpRuntimeApplication {
 }
 

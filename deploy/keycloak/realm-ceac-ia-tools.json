@@ -1,7 +1,52 @@
 {
   "realm": "ceac-ia-tools",
   "enabled": true,
-  "displayName": "Outlook Desktop MCP",
+  "displayName": "CEAC AI Tools",
+  "roles": {
+    "realm": [
+      {
+        "name": "ADMIN",
+        "description": "Administrative access to the control plane"
+      },
+      {
+        "name": "DESKTOP_CLIENT",
+        "description": "Desktop client access to bootstrap endpoint"
+      },
+      {
+        "name": "CEAC_AI_USER",
+        "description": "Legacy composite role for launcher and external MCP OAuth flows",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "DESKTOP_CLIENT",
+            "offline_access"
+          ]
+        }
+      },
+      {
+        "name": "CEAC_READ_ONLY",
+        "description": "Read-only desktop profile for CEAC MCP runtimes",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "DESKTOP_CLIENT",
+            "offline_access"
+          ]
+        }
+      },
+      {
+        "name": "CEAC_READ_WRITE",
+        "description": "Read-write desktop profile for CEAC MCP runtimes",
+        "composite": true,
+        "composites": {
+          "realm": [
+            "DESKTOP_CLIENT",
+            "offline_access"
+          ]
+        }
+      }
+    ]
+  },
   "clients": [
     {
       "clientId": "mcp-inspector",
@@ -24,7 +69,13 @@
       "defaultClientScopes": [
         "profile",
         "email",
-        "outlook:tools"
+        "roles"
+      ],
+      "optionalClientScopes": [
+        "outlook:tools",
+        "campus:tools",
+        "qbid:tools",
+        "trello:tools"
       ]
     }
   ],
@@ -32,6 +83,21 @@
     {
       "name": "outlook:tools",
       "description": "Scope used to access the Outlook Desktop MCP server",
+      "protocol": "openid-connect"
+    },
+    {
+      "name": "campus:tools",
+      "description": "Scope used to access the Campus MCP server",
+      "protocol": "openid-connect"
+    },
+    {
+      "name": "qbid:tools",
+      "description": "Scope used to access the qBID MCP server",
+      "protocol": "openid-connect"
+    },
+    {
+      "name": "trello:tools",
+      "description": "Scope used to access the Trello MCP server",
       "protocol": "openid-connect"
     }
   ]

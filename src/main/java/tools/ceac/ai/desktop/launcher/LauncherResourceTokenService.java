@@ -12,6 +12,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
+import tools.ceac.ai.security.ClientAccessLevel;
 
 /**
  * Issues local per-resource JWTs that the embedded runtimes can validate without depending on
@@ -82,6 +83,8 @@ public class LauncherResourceTokenService {
                 .claim("scope", bootstrap.requiredScope())
                 .claim("preferred_username", loginResponse.username())
                 .claim("email", loginResponse.email())
+                .claim("ceac_access_level", accessLevelValue(loginResponse.accessLevel()))
+                .claim("ceac_write_access", loginResponse.accessLevel() != null && loginResponse.accessLevel().allowsWrites())
                 .claim("resource_key", bootstrap.resourceKey())
                 .claim("resource_name", bootstrap.resourceName())
                 .claim("machine_id", machineId)
@@ -111,5 +114,9 @@ public class LauncherResourceTokenService {
             }
         }
         return null;
+    }
+
+    private String accessLevelValue(ClientAccessLevel accessLevel) {
+        return accessLevel == null ? ClientAccessLevel.READ_WRITE.name() : accessLevel.name();
     }
 }

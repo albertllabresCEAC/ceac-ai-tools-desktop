@@ -2,6 +2,8 @@ package tools.ceac.ai.desktop.launcher;
 
 import java.time.Instant;
 import java.util.List;
+import tools.ceac.ai.security.ClientAccessLevel;
+import tools.ceac.ai.security.ClientAccessLevelResolver;
 
 /**
  * Result of desktop login against the control plane.
@@ -16,8 +18,12 @@ public record ClientLoginResponse(
         String externalUserId,
         String username,
         String email,
+        ClientAccessLevel accessLevel,
         BootstrapResponse bootstrap,
         List<ClientMcpResourceResponse> resources
 ) {
+    public ClientLoginResponse {
+        accessLevel = ClientAccessLevelResolver.resolve(accessLevel, accessToken);
+    }
 }
 

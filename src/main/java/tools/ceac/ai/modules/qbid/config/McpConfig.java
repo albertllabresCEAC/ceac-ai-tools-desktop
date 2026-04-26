@@ -2,9 +2,11 @@ package tools.ceac.ai.modules.qbid.config;
 
 import tools.ceac.ai.modules.qbid.interfaces.mcp.QbidMcpTools;
 import org.springframework.ai.tool.ToolCallbackProvider;
-import org.springframework.ai.tool.method.MethodToolCallbackProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import tools.ceac.ai.security.AccessAwareMethodToolCallbackProvider;
+import tools.ceac.ai.security.RuntimeAccessProperties;
+import tools.ceac.ai.security.ToolAccessSupport;
 
 /**
  * Registra las tools de qBid en el servidor MCP.
@@ -18,9 +20,10 @@ import org.springframework.context.annotation.Configuration;
 public class McpConfig {
 
     @Bean
-    public ToolCallbackProvider qbidToolCallbacks(QbidMcpTools tools) {
-        return MethodToolCallbackProvider.builder()
+    public ToolCallbackProvider qbidToolCallbacks(QbidMcpTools tools, RuntimeAccessProperties accessProperties) {
+        return AccessAwareMethodToolCallbackProvider.builder()
                 .toolObjects(tools)
+                .methodFilter(method -> ToolAccessSupport.isMethodAllowed(method, accessProperties.getAccessLevel()))
                 .build();
     }
 }

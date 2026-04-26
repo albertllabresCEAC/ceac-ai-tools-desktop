@@ -80,6 +80,9 @@ abstract class AbstractManagedSpringRuntimeService {
         properties.put("mcp.remote.auth.required-audience", bootstrap.requiredAudience());
         properties.put("mcp.remote.auth.required-scope", bootstrap.requiredScope());
         properties.put("mcp.remote.auth.resource-name", bootstrap.resourceName());
+        if (session != null && session.accessLevel() != null) {
+            properties.put("ceac.security.access-level", session.accessLevel().name());
+        }
         if (session != null && session.launcherTokenIssuer() != null && !session.launcherTokenIssuer().isBlank()
                 && session.launcherTokenSecret() != null && !session.launcherTokenSecret().isBlank()) {
             properties.put("mcp.remote.launcher.enabled", "true");

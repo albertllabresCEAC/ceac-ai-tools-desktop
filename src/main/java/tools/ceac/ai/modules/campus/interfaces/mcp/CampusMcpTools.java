@@ -45,6 +45,7 @@ import tools.ceac.ai.modules.campus.interfaces.api.dto.DeleteQuizSlotResponse;
 import tools.ceac.ai.modules.campus.interfaces.api.dto.UpdateQuizMultichoiceQuestionRequest;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
+import tools.ceac.ai.security.CeacWriteTool;
 
 import java.util.List;
 
@@ -198,6 +199,7 @@ public class CampusMcpTools {
         return getUserProfileUseCase.execute(userId);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Crea una nueva tarea en una seccion de un curso sin subir documentos adjuntos.
             Requiere courseId y un request con section y name.
@@ -209,6 +211,7 @@ public class CampusMcpTools {
         return createCourseAssignmentUseCase.execute(courseId, request);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             ATENCION: esta herramienta da problemas por ahora y la subida del recurso puede fallar.
             El flujo sigue siendo experimental y no debe tratarse como estable en produccion.
@@ -270,6 +273,7 @@ public class CampusMcpTools {
         return getGradeUseCase.execute(assignmentId, userId);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Califica la entrega de un alumno. Requiere assignmentId, userId, grade (entero), feedback (HTML o texto) y sendNotification (true/false).
             ANTES DE EJECUTAR: muestra al usuario un resumen (alumno, nota, feedback) y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
@@ -297,6 +301,7 @@ public class CampusMcpTools {
         return getQuizCommentUseCase.execute(attemptId, slot);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Guarda la puntuacion y comentario de una pregunta de un intento. Requiere attemptId, slot, mark (numero como string) y comentario.
             ANTES DE EJECUTAR: muestra al usuario un resumen (intento, slot, nota, comentario) y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
@@ -312,6 +317,7 @@ public class CampusMcpTools {
         return getQuizUserOverridesUseCase.execute(cmid);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Crea o actualiza una excepcion de usuario en un cuestionario.
             Requiere: cmid, userId.
@@ -325,6 +331,7 @@ public class CampusMcpTools {
         return "ok";
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Elimina una excepcion de usuario de un cuestionario. Requiere el overrideId.
             ANTES DE EJECUTAR: muestra al usuario los datos de la excepcion y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
@@ -345,6 +352,7 @@ public class CampusMcpTools {
         return getConversationMessagesUseCase.execute(currentUserId, convId, true, 101, 0);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Marca una conversacion como leida. Requiere convId y userId.
             ANTES DE EJECUTAR: pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
@@ -353,6 +361,7 @@ public class CampusMcpTools {
         return "ok";
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Responde a un mensaje existente. Requiere studentUserId, myUserId, messageTimestamp, messageId, subject y content (HTML).
             ANTES DE EJECUTAR: muestra al usuario el destinatario, asunto y contenido del mensaje y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
@@ -362,6 +371,7 @@ public class CampusMcpTools {
         return "ok";
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Envia un nuevo mensaje a uno o varios destinatarios. Requiere lista de recipientIds (solo el numero, sin 'user-'), subject y content (HTML).
             ANTES DE EJECUTAR: muestra al usuario la lista de destinatarios, asunto y contenido del mensaje y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")
@@ -423,6 +433,7 @@ public class CampusMcpTools {
         return getQuizQuestionUseCase.execute(questionId, cmid);
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Crea una nueva pregunta de tipo opcion multiple en el banco de preguntas de un cuestionario.
             Requiere: cmid y los datos de la pregunta.
@@ -437,6 +448,7 @@ public class CampusMcpTools {
         return "ok";
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Esta herramienta SOLO crea la pregunta en el banco, NO la anade al cuestionario ni la hace visible a los alumnos; para crear una pregunta y anadirla directamente al test usa createQuizMultichoiceQuestion.
             Crea una nueva pregunta de tipo opcion multiple directamente en el banco de preguntas (sin anadirla a ningun slot del cuestionario).
@@ -452,6 +464,7 @@ public class CampusMcpTools {
         return "ok";
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Actualiza una pregunta de tipo opcion multiple existente.
             Requiere: questionId, cmid y los datos actualizados de la pregunta.
@@ -464,6 +477,7 @@ public class CampusMcpTools {
         return "ok";
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Elimina un slot (pregunta) de un cuestionario. Requiere el cmid del modulo y el slotId. Devuelve la nueva suma de puntos y el nuevo numero de preguntas.
             ANTES DE EJECUTAR: muestra al usuario los datos del slot (id, numero, nombre de la pregunta si esta disponible) y pide confirmacion mediante un selector Si/No. Solo procede si elige Si.""")

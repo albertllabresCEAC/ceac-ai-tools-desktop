@@ -1,6 +1,8 @@
 package tools.ceac.ai.desktop.launcher;
 
 import java.util.List;
+import tools.ceac.ai.security.ClientAccessLevel;
+import tools.ceac.ai.security.ClientAccessLevelResolver;
 
 /**
  * Local desktop session after authenticating with the control plane.
@@ -21,11 +23,20 @@ public record ControlPlaneSession(
         String clientVersion,
         String username,
         String email,
+        ClientAccessLevel accessLevel,
         BootstrapResponse bootstrap,
         List<ClientMcpResourceResponse> resources,
         String launcherTokenIssuer,
         String launcherTokenSecret
 ) {
+    public ControlPlaneSession {
+        accessLevel = ClientAccessLevelResolver.resolve(accessLevel, accessToken);
+    }
+
+    public boolean allowsWrites() {
+        return accessLevel != null && accessLevel.allowsWrites();
+    }
+
     /**
      * Returns whether the primary bootstrap of the session uses centralized auth for the public MCP
      * surface.

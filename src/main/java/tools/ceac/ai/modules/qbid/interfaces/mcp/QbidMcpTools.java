@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.stereotype.Component;
+import tools.ceac.ai.security.CeacWriteTool;
 
 /**
  * Herramientas MCP expuestas por el runtime qBid.
@@ -234,6 +235,7 @@ public class QbidMcpTools {
 
     // Guardado de informe periodico
 
+    @CeacWriteTool
     @Tool(description = """
             Guarda el borrador de un informe periodico mensual (accion reversible).
             El informe queda actualizado pero sigue siendo editable.
@@ -319,6 +321,7 @@ public class QbidMcpTools {
 
     // Firma de informe periodico
 
+    @CeacWriteTool
     @Tool(description = """
             Firma (valida definitivamente) un informe periodico mensual. ACCION IRREVERSIBLE.
             Una vez firmado, el informe queda bloqueado y ya no puede ser modificado.
@@ -490,6 +493,7 @@ public class QbidMcpTools {
 
     // Guardado del plan de actividades
 
+    @CeacWriteTool
     @Tool(description = """
             Guarda el plan de actividades formativas de un convenio (borrador, editable).
             Marca que actividades ha realizado el alumno/a y actualiza el responsable empresa.
@@ -555,6 +559,7 @@ public class QbidMcpTools {
         return result;
     }
 
+    @CeacWriteTool
     @Tool(description = """
             Valida (firma definitivamente) el plan de actividades de un convenio FCT.
             ACCION IRREVERSIBLE: una vez validado el plan no puede editarse.
